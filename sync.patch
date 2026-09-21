@@ -1,0 +1,1192 @@
+diff --git a/README.md b/README.md
+index cf61160..c16db6e 100644
+--- a/README.md
++++ b/README.md
+@@ -1,26 +1,35 @@
+ <div align="center">
+ 
+-# opencode2dsh
++# OpenCode
+ 
+ **Free OpenCode Zen models, natively inside DSH (DeepSeek Harness).**
+ 
+ No API key. No registration. No extra process.
+ 
+-[![npm](https://img.shields.io/npm/v/@opencode2dsh%2Fdsh-plugin)](https://www.npmjs.com/package/@opencode2dsh/dsh-plugin)
+-[![license](https://img.shields.io/npm/l/@opencode2dsh%2Fdsh-plugin)](https://github.com/FishBottle7/opencode2dsh/blob/master/LICENSE)
++[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+ [![node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen)](https://nodejs.org)
+-[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/FishBottle7/opencode2dsh)
++[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/Lewis-0710/dsh-opencode)
+ 
+ English | [简体中文](README.zh-CN.md)
+ 
+ </div>
+ 
++> [!NOTE]
++> **Fork Maintenance Version** | This repository is a fork of [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh).
++>
++> **Differences from Upstream**:
++> 1. Support Responses API routing for Muse Spark models (`/zen/v1/responses`)
++> 2. Provider and plugin branding upgraded to OpenCode
++> 3. Support upstream synchronization workflow (`sync.patch` and `sync.sh`)
++>
++> See [sync.patch](./sync.patch) for details.
++
+ ---
+ 
+-opencode2dsh registers a native DSH `LlmAdapter` that streams directly from
++OpenCode registers a native DSH `LlmAdapter` that streams directly from
+ [OpenCode Zen](https://opencode.ai/zen)'s **anonymous free lane** — the same
+ models OpenCode's own CLI uses without an account, served to your DSH model
+-picker as a regular provider called `opencode2dsh`.
++picker as a regular provider called `OpenCode`.
+ 
+ Requests leave your machine looking exactly like traffic from the OpenCode
+ CLI (same user agent, same correlation headers), and the model catalog stays
+@@ -40,26 +49,19 @@ nothing to host.
+ ## Install
+ 
+ **From the plugin market** (recommended, once this repo is listed there):
+-in DSH open **Settings → Plugin Market**, search `opencode2dsh`, one-click
++in DSH open **Settings → Plugin Market**, search `OpenCode`, one-click
+ install.
+ 
+-**From npm**:
++**From source**:
+ 
+ ```sh
+-dsh plugin --profile web add @opencode2dsh/dsh-plugin
+-```
+-
+-**From source** (build the tarball yourself):
+-
+-```sh
+-git clone https://github.com/FishBottle7/opencode2dsh.git
+-cd opencode2dsh/packages/plugin
+-pnpm install && pnpm pack
+-dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
++git clone https://github.com/Lewis-0710/dsh-opencode.git
++cd dsh-opencode/packages/plugin
++pnpm install && pnpm build
+ ```
+ 
+ **Verify**: restart `dsh web`, open the model picker, and pick a model from
+-the **opencode2dsh** group.
++the **OpenCode** group.
+ 
+ Requires DSH (DeepSeek Harness) with a web profile; Node.js ≥ 20 (already
+ present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
+@@ -69,18 +71,18 @@ present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
+ Defaults work out of the box. Override via the profile's `cordis.patch.yml`:
+ 
+ ```yaml
+-- id: opencode2dsh
++- id: OpenCode
+   name: '@opencode2dsh/dsh-plugin'
+   config:
+     mode: adapter        # adapter (default) | sidecar
+-    providerId: opencode2dsh
++    providerId: OpenCode
+     refreshSeconds: 300  # catalog refresh cadence
+ ```
+ 
+ | Option | Default | Description |
+ | --- | --- | --- |
+ | `mode` | `adapter` | `adapter`: native LlmAdapter streaming straight from Zen. `sidecar`: legacy local-agent mode, not bundled — build the agent from `legacy/agent` and pass `agentPath`. |
+-| `providerId` | `opencode2dsh` | Provider name shown in DSH. |
++| `providerId` | `OpenCode` | Provider name shown in DSH. |
+ | `refreshSeconds` | `300` | Live catalog refresh interval. Pricing metadata refreshes every 24 h. |
+ | `agentPath` | auto-resolved | Sidecar only: path to the agent binary. |
+ | `agentArgs` | — | Sidecar only: extra CLI args for the agent. |
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index cb7603f..9c5ee02 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -1,25 +1,34 @@
+ <div align="center">
+ 
+-# opencode2dsh
++# OpenCode
+ 
+ **在 DSH（DeepSeek Harness）里原生使用 OpenCode Zen 的免费匿名模型。**
+ 
+ 无需 API Key。无需注册。无需额外进程。
+ 
+-[![npm](https://img.shields.io/npm/v/@opencode2dsh%2Fdsh-plugin)](https://www.npmjs.com/package/@opencode2dsh/dsh-plugin)
+-[![license](https://img.shields.io/npm/l/@opencode2dsh%2Fdsh-plugin)](https://github.com/FishBottle7/opencode2dsh/blob/master/LICENSE)
++[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+ [![node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen)](https://nodejs.org)
+-[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/FishBottle7/opencode2dsh)
++[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/Lewis-0710/dsh-opencode)
+ 
+ [English](README.md) | 简体中文
+ 
+ </div>
+ 
++> [!NOTE]
++> **Fork 维护版本** | 本仓库是 [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh) 的维护分支。
++>
++> **与上游差异**：
++> 1. 支持 Muse Spark 系列模型的 Responses API 调用 (`/zen/v1/responses`)
++> 2. 提供者与插件名称升级为 OpenCode
++> 3. 支持上游同步机制（`sync.patch` 与 `sync.sh`）
++>
++> 详见 [sync.patch](./sync.patch)。
++
+ ---
+ 
+-opencode2dsh 会向 DSH 注册一个原生的 `LlmAdapter`，直接流式对接
++OpenCode 会向 DSH 注册一个原生的 `LlmAdapter`，直接流式对接
+ [OpenCode Zen](https://opencode.ai/zen) 的**匿名免费通道**——也就是
+-OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以 `opencode2dsh`
++OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以 `OpenCode`
+ 这个常规 provider 出现在你的 DSH 模型选择器里。
+ 
+ 插件发出的请求与 OpenCode CLI 的流量完全同形（相同的 User-Agent、相同的
+@@ -39,24 +48,17 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
+ ## 安装
+ 
+ **从插件市场安装**（推荐，收录后可用）：在 DSH 里打开 **设置 → 插件市场**，
+-搜索 `opencode2dsh`，一键安装。
++搜索 `OpenCode`，一键安装。
+ 
+-**从 npm 安装**：
++**从源码安装**：
+ 
+ ```sh
+-dsh plugin --profile web add @opencode2dsh/dsh-plugin
+-```
+-
+-**从源码安装**（自行打包）：
+-
+-```sh
+-git clone https://github.com/FishBottle7/opencode2dsh.git
+-cd opencode2dsh/packages/plugin
+-pnpm install && pnpm pack
+-dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
++git clone https://github.com/Lewis-0710/dsh-opencode.git
++cd dsh-opencode/packages/plugin
++pnpm install && pnpm build
+ ```
+ 
+-**验证**：重启 `dsh web`，打开模型选择器，在 **opencode2dsh** 分组里选模型即可。
++**验证**：重启 `dsh web`，打开模型选择器，在 **OpenCode** 分组里选模型即可。
+ 
+ 需要带 web profile 的 DSH（DeepSeek Harness）；Node.js ≥ 20（DSH 能跑就满足）；
+ 出站 HTTPS 需可达 `opencode.ai` 与 `models.dev`。
+@@ -66,18 +68,18 @@ dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+ 默认配置开箱即用。需要覆盖时，编辑 profile 的 `cordis.patch.yml`：
+ 
+ ```yaml
+-- id: opencode2dsh
++- id: OpenCode
+   name: '@opencode2dsh/dsh-plugin'
+   config:
+     mode: adapter        # adapter（默认）| sidecar
+-    providerId: opencode2dsh
++    providerId: OpenCode
+     refreshSeconds: 300  # 目录刷新周期（秒）
+ ```
+ 
+ | 配置项 | 默认值 | 说明 |
+ | --- | --- | --- |
+ | `mode` | `adapter` | `adapter`：原生 LlmAdapter 直连 Zen。`sidecar`：旧版本地 agent 模式，不随包发行——请从 `legacy/agent` 自行构建并通过 `agentPath` 指定。 |
+-| `providerId` | `opencode2dsh` | 在 DSH 中显示的 provider 名称。 |
++| `providerId` | `OpenCode` | 在 DSH 中显示的 provider 名称。 |
+ | `refreshSeconds` | `300` | 实时目录刷新间隔；定价元数据每 24 小时刷新。 |
+ | `agentPath` | 自动解析 | 仅 sidecar：agent 二进制路径。 |
+ | `agentArgs` | — | 仅 sidecar：传给 agent 的额外 CLI 参数。 |
+diff --git a/cordis.patch.yml b/cordis.patch.yml
+index d07efa2..16bdc3c 100644
+--- a/cordis.patch.yml
++++ b/cordis.patch.yml
+@@ -1,10 +1,10 @@
+-# opencode2dsh DSH plugin — bundle patch: insert the plugin row (deployment-global).
++# OpenCode DSH plugin — bundle patch: insert the plugin row (deployment-global).
+ #
+ # The plugin itself is distributed as the npm package @opencode2dsh/dsh-plugin
+ # (declared in dependencies); this patch only inserts its loader row.
+ # Defaults need no edits: the adapter registers into llm-pi-ai with no key and
+ # no extra process. Override any option via the config object (src/config.ts).
+ - insert:
+-    - id: opencode2dsh
++    - id: OpenCode
+       name: '@opencode2dsh/dsh-plugin'
+       config: {}
+diff --git a/package.json b/package.json
+index b850be0..1a14422 100644
+--- a/package.json
++++ b/package.json
+@@ -1,5 +1,5 @@
+ {
+-  "name": "opencode2dsh",
++  "name": "dsh-opencode",
+   "private": true,
+   "description": "Free OpenCode Zen models for DeepSeek Harness (DSH): native dsh-llm adapter plugin, no API key.",
+   "dsh": {
+diff --git a/packages/plugin/cordis.patch.yml b/packages/plugin/cordis.patch.yml
+index 22c5c6f..ab0f134 100644
+--- a/packages/plugin/cordis.patch.yml
++++ b/packages/plugin/cordis.patch.yml
+@@ -1,9 +1,9 @@
+-# opencode2dsh DSH plugin — bundle patch: insert the plugin row (deployment-global).
++# OpenCode DSH plugin — bundle patch: insert the plugin row (deployment-global).
+ #
+ # Defaults need no edits: the plugin spawns the agent on a random loopback port,
+ # generates/persists the local token, and registers itself into llm-pi-ai.
+ # Override any option via the config object below (see src/config.ts).
+ - insert:
+-    - id: opencode2dsh
++    - id: OpenCode
+       name: '@opencode2dsh/dsh-plugin'
+       config: {}
+diff --git a/packages/plugin/src/adapter/events.ts b/packages/plugin/src/adapter/events.ts
+index bb7e7c5..0e70909 100644
+--- a/packages/plugin/src/adapter/events.ts
++++ b/packages/plugin/src/adapter/events.ts
+@@ -191,5 +191,5 @@ export async function* toStreamChunks(events: AsyncIterable<PiEvent>, contextWin
+         return
+     }
+   }
+-  throw new Error('opencode2dsh: pi-ai event stream ended without done/error')
++  throw new Error('OpenCode: pi-ai event stream ended without done/error')
+ }
+diff --git a/packages/plugin/src/adapter/ids.ts b/packages/plugin/src/adapter/ids.ts
+index e10a273..aef2379 100644
+--- a/packages/plugin/src/adapter/ids.ts
++++ b/packages/plugin/src/adapter/ids.ts
+@@ -56,7 +56,7 @@ export function deriveRequestIDs(messages: Array<{ role: string; content: unknow
+   return {
+     session: canonicalSessionID(signal),
+     request: randomID('req', 16),
+-    project: stableID('prj', 'opencode2dsh:default-project'),
++    project: stableID('prj', 'OpenCode:default-project'),
+     parentSession: '',
+   }
+ }
+diff --git a/packages/plugin/src/adapter/messages.ts b/packages/plugin/src/adapter/messages.ts
+index 3918515..e7d10ce 100644
+--- a/packages/plugin/src/adapter/messages.ts
++++ b/packages/plugin/src/adapter/messages.ts
+@@ -114,7 +114,7 @@ function toPiAssistant(message: HarnessMessage, providerId: string): Extract<PiM
+         content.push({ type: 'toolCall', id: block.id, name: block.name, arguments: parseArguments(block.arguments) })
+         break
+       case 'image':
+-        throw new Error('opencode2dsh: assistant image output cannot be replayed to a text-only model')
++        throw new Error('OpenCode: assistant image output cannot be replayed to a text-only model')
+       default:
+         break
+     }
+@@ -219,6 +219,19 @@ export function freeLaneGateTool(name: (typeof FREE_LANE_GATE_TOOL_NAMES)[number
+   }
+ }
+ 
++/** Responses-API variant: flat function shape, no nested `function` object. */
++export function freeLaneGateToolResponses(name: (typeof FREE_LANE_GATE_TOOL_NAMES)[number]) {
++  return {
++    type: 'function',
++    name,
++    description: 'Reserved for the host runtime; do not call it.',
++    parameters: {
++      type: 'object',
++      properties: {},
++    },
++  }
++}
++
+ /**
+  * Rewrite an outgoing chat-completions payload so it satisfies the free-lane
+  * agent-shape gate (wired through pi-ai's onPayload). Appends only the gate
+@@ -231,6 +244,19 @@ export function freeLaneGateTool(name: (typeof FREE_LANE_GATE_TOOL_NAMES)[number
+ export function ensureFreeLaneShape(payload: unknown): unknown | undefined {
+   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
+   const body = payload as Record<string, unknown>
++  if (Array.isArray(body.input)) {
++    const tools = Array.isArray(body.tools) ? (body.tools as unknown[]) : []
++    const names = new Set(
++      tools.map((tool) => {
++        return typeof tool === 'object' && tool !== null ? (tool as { name?: unknown }).name : undefined
++      }),
++    )
++    const missing = FREE_LANE_GATE_TOOL_NAMES.filter((name) => !names.has(name))
++    if (missing.length === 0) return undefined
++    const next: Record<string, unknown> = { ...body }
++    next.tools = [...tools, ...missing.map((name) => freeLaneGateToolResponses(name))]
++    return next
++  }
+   if (!Array.isArray(body.messages)) return undefined
+   const tools = Array.isArray(body.tools) ? (body.tools as unknown[]) : []
+   const names = new Set(
+diff --git a/packages/plugin/src/adapter/zen-adapter.ts b/packages/plugin/src/adapter/zen-adapter.ts
+index 342eb39..6de81a6 100644
+--- a/packages/plugin/src/adapter/zen-adapter.ts
++++ b/packages/plugin/src/adapter/zen-adapter.ts
+@@ -10,7 +10,7 @@ import { routingContext, type RoutingContext } from '../pool/dispatcher.ts'
+ import { classifyStreamFailure, isRegionBlocked, shouldRotate } from '../pool/rotate.ts'
+ 
+ /**
+- * The TS adapter: registers as a DSH LlmAdapter for the `opencode2dsh` route
++ * The TS adapter: registers as a DSH LlmAdapter for the `OpenCode` route
+  * and streams directly from the OpenCode Zen anonymous lane. The wire layer is
+  * pi-ai's openai-completions implementation for most models (the same one DSH
+  * uses for every OpenAI-compatible provider), plus pi-ai's openai-responses
+@@ -21,7 +21,8 @@ import { classifyStreamFailure, isRegionBlocked, shouldRotate } from '../pool/ro
+  * prepareCall/stream) — structural, no host import.
+  */
+ 
+-export const PROVIDER_ID = 'opencode2dsh'
++export const PROVIDER_ID = 'OpenCode'
++export const PROVIDER_NAME = 'OpenCode'
+ 
+ export interface ZenModelInfo {
+   id: string
+@@ -108,8 +109,8 @@ const ANONYMOUS_KEY = 'public'
+  * carry "timeout" so classifyStreamFailure maps them to 'transport' and
+  * the rotate loop gets to move the session to a live exit.
+  */
+-export const WATCHDOG_FIRST_MESSAGE = 'opencode2dsh: first stream event timeout (exit silent before any response)'
+-export const WATCHDOG_IDLE_MESSAGE = 'opencode2dsh: stream body idle timeout (exit went silent mid-response)'
++export const WATCHDOG_FIRST_MESSAGE = 'OpenCode: first stream event timeout (exit silent before any response)'
++export const WATCHDOG_IDLE_MESSAGE = 'OpenCode: stream body idle timeout (exit went silent mid-response)'
+ 
+ /** Default watchdog windows (docs/ip-pool.md; test-injectable via constructor). */
+ export const DEFAULT_FIRST_EVENT_MS = 30_000
+@@ -123,6 +124,18 @@ export const DEFAULT_BODY_IDLE_MS = 120_000
+  */
+ export const RESPONSES_BODY_IDLE_MS = 300_000
+ 
++/**
++ * Responses-only models on Zen (issue #7): `muse-spark-*` return a bare 500
++ * on `POST /zen/v1/chat/completions` but 200 on `POST /zen/v1/responses`
++ * (opencode #44659/#44847, DSH #3957). Route by model id; extend this list
++ * if Zen moves more models (candidates: gpt-5.6-luna, grok-4.6).
++ */
++export function isResponsesModel(id: string): boolean {
++  return String(id ?? '').toLowerCase().startsWith('muse-spark')
++}
++
++export const usesResponsesApi = isResponsesModel
++
+ /** The terminal error event pi-ai owes but never sent (watchdog teardown). */
+ function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
+   return {
+@@ -139,17 +152,7 @@ function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
+   }
+ }
+ 
+-/**
+- * Responses-only models on Zen (issue #7): `muse-spark-*` return a bare 500
+- * on `POST /zen/v1/chat/completions` but 200 on `POST /zen/v1/responses`
+- * (opencode #44659/#44847, DSH #3957). Route by model id; extend this list
+- * if Zen moves more models (candidates: gpt-5.6-luna, grok-4.6).
+- */
+-export function isResponsesModel(id: string): boolean {
+-  return String(id ?? '').toLowerCase().startsWith('muse-spark')
+-}
+-
+-function toPiModel(id: string, reasoning: boolean): Model<Api> {
++export function toPiModel(id: string, reasoning: boolean): Model<Api> {
+   const isResponses = isResponsesModel(id)
+   return {
+     id,
+@@ -204,7 +207,7 @@ export class ZenAdapter {
+     }
+     this.#provider = createProvider<Api>({
+       id: PROVIDER_ID,
+-      name: PROVIDER_ID,
++      name: PROVIDER_NAME,
+       baseUrl,
+       auth,
+       models: [],
+@@ -212,7 +215,7 @@ export class ZenAdapter {
+     })
+     this.#responsesProvider = createProvider<Api>({
+       id: PROVIDER_ID,
+-      name: PROVIDER_ID,
++      name: PROVIDER_NAME,
+       baseUrl,
+       auth,
+       models: [],
+@@ -221,7 +224,7 @@ export class ZenAdapter {
+   }
+ 
+   providerInfo(provider: string): { id: string; name: string } {
+-    return { id: provider, name: PROVIDER_ID }
++    return { id: provider, name: PROVIDER_NAME }
+   }
+ 
+   /**
+@@ -450,13 +453,13 @@ export class ZenAdapter {
+           const e = buffered[i] as PiEvent & { error?: { errorMessage?: string }; message?: { errorMessage?: string; stopReason?: string } }
+           if (e.type === 'error' && e.error) {
+             e.error.errorMessage = rotateStory.length > 1
+-              ? `${e.error.errorMessage} (opencode2dsh 轮换 ${rotateStory.length - 1} 次后放弃: ${rotateStory.join(' -> ')})`
++              ? `${e.error.errorMessage} (OpenCode 轮换 ${rotateStory.length - 1} 次后放弃: ${rotateStory.join(' -> ')})`
+               : e.error.errorMessage
+             break
+           }
+           if (e.type === 'done' && e.message?.stopReason === 'error') {
+             e.message.errorMessage = rotateStory.length > 1
+-              ? `${e.message.errorMessage} (opencode2dsh 轮换 ${rotateStory.length - 1} 次后放弃: ${rotateStory.join(' -> ')})`
++              ? `${e.message.errorMessage} (OpenCode 轮换 ${rotateStory.length - 1} 次后放弃: ${rotateStory.join(' -> ')})`
+               : e.message.errorMessage!
+             break
+           }
+diff --git a/packages/plugin/src/client/IpPoolCard.tsx b/packages/plugin/src/client/IpPoolCard.tsx
+index 7ce7eca..605b712 100644
+--- a/packages/plugin/src/client/IpPoolCard.tsx
++++ b/packages/plugin/src/client/IpPoolCard.tsx
+@@ -83,7 +83,7 @@ export interface PoolStatusView {
+ }
+ 
+ /** The bridge prefix (same-origin, loopback-only on the host). */
+-const BRIDGE_PREFIX = '/api/opencode2dsh/ip-pool'
++const BRIDGE_PREFIX = '/api/OpenCode/ip-pool'
+ 
+ const DEFAULTS: IpPoolSettingsValue = {
+   enabled: false,
+diff --git a/packages/plugin/src/client/index.ts b/packages/plugin/src/client/index.ts
+index 3b5997e..df78acd 100644
+--- a/packages/plugin/src/client/index.ts
++++ b/packages/plugin/src/client/index.ts
+@@ -1,5 +1,5 @@
+ /**
+- * opencode2dsh — browser half. Registers the IP 池 plugin card inside
++ * OpenCode — browser half. Registers the IP 池 plugin card inside
+  * 设置 → 插件 → 可配置插件 via the `settings.plugin.item` slot (declared at
+  * runtime by @deepseek-ai/dsh-client-ui-settings-plugins), keyed by the
+  * `ip-pool` namespace this plugin's Host half registers.
+@@ -51,7 +51,7 @@ export const inject = ['slots', 'locale', 'settingsScope']
+  * @param ctx - client root context.
+  */
+ export function apply(ctx: ClientContext): void {
+-  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'opencode2dsh: copy dictionaries')
++  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'OpenCode: copy dictionaries')
+ 
+   const scope = ctx.settingsScope.bind({ namespace: SETTINGS_NAMESPACE }) as unknown as IpPoolCardInjected['scope']
+   // The scope's methods are instance methods (this-bound to the controller);
+@@ -85,7 +85,7 @@ export function apply(ctx: ClientContext): void {
+       // era, so the call goes through the wide component-erased face.
+       yield (ctx.slots.register as (o: typeof options, c: typeof IpPoolCard) => () => void)(options, IpPoolCard)
+     } catch (err) {
+-      console.warn(`opencode2dsh: settings card rejected by this DSH build (${err instanceof Error ? err.message : String(err)}) — model routing is unaffected; upgrade DSH to >= 0.1.0-rc.7 for the settings page`)
++      console.warn(`OpenCode: settings card rejected by this DSH build (${err instanceof Error ? err.message : String(err)}) — model routing is unaffected; upgrade DSH to >= 0.1.0-rc.7 for the settings page`)
+     }
+   })
+ }
+diff --git a/packages/plugin/src/client/locales.ts b/packages/plugin/src/client/locales.ts
+index a3a8e24..fdbb3c1 100644
+--- a/packages/plugin/src/client/locales.ts
++++ b/packages/plugin/src/client/locales.ts
+@@ -6,7 +6,7 @@
+ /** Simplified Chinese dictionary (the key-set source of truth). */
+ export const zh = {
+   nav: 'IP 池',
+-  title: 'IP 池（opencode2dsh）',
++  title: 'IP 池（OpenCode）',
+   description: '多出口调度免费模型的可用性：出口间自动轮换、429 冷却、按出口×模型探活。',
+   statusLoading: '加载中…',
+   statusUnavailable: '设置服务不可用，无法读写 IP 池配置。',
+@@ -109,7 +109,7 @@ export const zh = {
+ /** English dictionary, checked complete against the zh key set. */
+ export const en: Record<keyof typeof zh, string> = {
+   nav: 'IP Pool',
+-  title: 'IP Pool (opencode2dsh)',
++  title: 'IP Pool (OpenCode)',
+   description: 'Schedules free-model availability across exit IPs: rotation, 429 cooldown, per-exit×model probes.',
+   statusLoading: 'Loading…',
+   statusUnavailable: 'Settings service unavailable; the IP pool configuration cannot be read or written.',
+diff --git a/packages/plugin/src/config.ts b/packages/plugin/src/config.ts
+index 35beb8b..8b535b1 100644
+--- a/packages/plugin/src/config.ts
++++ b/packages/plugin/src/config.ts
+@@ -78,7 +78,7 @@ export interface IpPoolConfig {
+ }
+ 
+ export const defaults = {
+-  providerId: 'opencode2dsh',
++  providerId: 'OpenCode',
+   apiKeyEnv: 'OPENCODE2DSH_TOKEN',
+   refreshSeconds: 300,
+   restartDelayMs: 1000,
+diff --git a/packages/plugin/src/index.ts b/packages/plugin/src/index.ts
+index 57feddb..f916f92 100644
+--- a/packages/plugin/src/index.ts
++++ b/packages/plugin/src/index.ts
+@@ -11,7 +11,7 @@ import { applyIpPoolSettings } from './ip-pool-settings/apply.ts'
+ import { fetchHealth, fetchModels, registerProvider, removeProviderRoute } from './provider.js'
+ 
+ /**
+- * opencode2dsh DSH cordis plugin entry.
++ * OpenCode DSH cordis plugin entry.
+  *
+  * Two modes (config.mode, default `adapter`):
+  *  - adapter: register a DSH LlmAdapter streaming directly from the Zen
+@@ -50,7 +50,7 @@ export interface PluginContext {
+   on?(event: string, listener: (...args: never[]) => unknown): () => void
+ }
+ 
+-export const name = 'opencode2dsh'
++export const name = 'OpenCode'
+ export const inject = ['llm', 'credentials', 'settings'] as const
+ export function apply(ctx: PluginContext, config: Opencode2dshConfig = {}): { ready: Promise<ReadyInfo> } {
+   if (resolveConfig(config).mode === 'sidecar') return applySidecar(ctx, config)
+@@ -68,7 +68,7 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+   const ready = Promise.resolve({ port: 0, version: 'adapter' })
+ 
+   if (!ctx.llm || typeof ctx.llm.registerAdapter !== 'function') {
+-    logger.error('opencode2dsh: llm service unavailable; adapter mode cannot register')
++    logger.error('OpenCode: llm service unavailable; adapter mode cannot register')
+     return { ready }
+   }
+ 
+@@ -78,7 +78,7 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+   // cordis.patch.yml; disabled keeps the process byte-for-byte on direct.
+   // Lifecycle (assembly on first enable, live reconfigure, dispose) is owned
+   // by applyIpPoolSettings through the plugin fiber.
+-  const dataDir = join(homedir(), '.opencode2dsh')
++  const dataDir = join(homedir(), '.OpenCode')
+   const statusPath = join(dataDir, 'adapter-status.json')
+   const writeStatus = (status: CatalogSnapshot, lastError: string): void => {
+     void writeFile(
+@@ -93,7 +93,7 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+     cachePath: defaultCachePath(dataDir),
+     onRefresh: (status, lastError) => {
+       writeStatus(status, lastError)
+-      if (lastError) logger.warn(`opencode2dsh: catalog refresh issue: ${lastError}`)
++      if (lastError) logger.warn(`OpenCode: catalog refresh issue: ${lastError}`)
+     },
+   })
+   const adapter = new ZenAdapter(catalog)
+@@ -112,21 +112,21 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+   // away, even while the catalog is still warming up (listModels is read
+   // live at selector time, so models appear as refreshes land).
+   ctx.llm.registerAdapter([PROVIDER_ID], adapter)
+-  logger.info(`opencode2dsh: adapter registered for "${PROVIDER_ID}" (catalog warms up in background)`)
++  logger.info(`OpenCode: adapter registered for "${PROVIDER_ID}" (catalog warms up in background)`)
+   void catalog.start().catch((err) => {
+-    logger.error(`opencode2dsh: catalog start failed: ${err instanceof Error ? err.message : String(err)}`)
++    logger.error(`OpenCode: catalog start failed: ${err instanceof Error ? err.message : String(err)}`)
+   })
+ 
+-  // A sidecar leftover (llm-pi-ai.providers.opencode2dsh pointing at a dead
++  // A sidecar leftover (llm-pi-ai.providers.OpenCode pointing at a dead
+   // local port) would shadow the adapter registration and fail every dispatch
+   // with a connection error. Remove it before the route can be used.
+   if (ctx.settings) {
+     removeProviderRoute({ settings: ctx.settings }, cfg.providerId)
+       .then((removed) => {
+-        if (removed) logger.info(`opencode2dsh: removed stale sidecar route for "${cfg.providerId}" from llm-pi-ai settings`)
++        if (removed) logger.info(`OpenCode: removed stale sidecar route for "${cfg.providerId}" from llm-pi-ai settings`)
+       })
+       .catch((err) => {
+-        logger.warn(`opencode2dsh: stale route cleanup failed: ${err instanceof Error ? err.message : String(err)}`)
++        logger.warn(`OpenCode: stale route cleanup failed: ${err instanceof Error ? err.message : String(err)}`)
+       })
+   }
+ 
+@@ -141,7 +141,7 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+ 
+ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready: Promise<ReadyInfo> } {
+   const cfg = resolveConfig(config)
+-  const paths = configPaths(join(homedir(), '.opencode2dsh'))
++  const paths = configPaths(join(homedir(), '.OpenCode'))
+   const logger = ctx.logger
+ 
+   let agent: AgentProcess | null = null
+@@ -174,7 +174,7 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+       }
+       await new Promise((r) => setTimeout(r, 300))
+     }
+-    logger.warn('opencode2dsh: catalog still pending after timeout; registering whatever the agent exposes now')
++    logger.warn('OpenCode: catalog still pending after timeout; registering whatever the agent exposes now')
+   }
+ 
+   async function refreshModels(info: ReadyInfo, token: string, { waitReady = false } = {}): Promise<void> {
+@@ -193,10 +193,10 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+           models,
+         )
+       } else {
+-        logger.warn('opencode2dsh: credentials/settings services unavailable; provider route not registered')
++        logger.warn('OpenCode: credentials/settings services unavailable; provider route not registered')
+       }
+     } catch (err) {
+-      logger.warn(`opencode2dsh: model refresh failed: ${err instanceof Error ? err.message : String(err)}`)
++      logger.warn(`OpenCode: model refresh failed: ${err instanceof Error ? err.message : String(err)}`)
+     }
+   }
+ 
+@@ -221,13 +221,13 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+       onLog,
+     })
+     agent.on('exit-restart', (delay, crashes) => {
+-      logger.warn(`opencode2dsh: agent exited unexpectedly; restarting in ${delay}ms (attempt ${crashes})`)
++      logger.warn(`OpenCode: agent exited unexpectedly; restarting in ${delay}ms (attempt ${crashes})`)
+     })
+     agent.on('circuit-tripped', (crashes) => {
+-      logger.error(`opencode2dsh: agent crashed ${crashes} times consecutively; giving up`)
++      logger.error(`OpenCode: agent crashed ${crashes} times consecutively; giving up`)
+     })
+     agent.on('state', (state) => {
+-      if (state === 'ready') logger.info('opencode2dsh: agent ready')
++      if (state === 'ready') logger.info('OpenCode: agent ready')
+     })
+     const info = await agent.start()
+     readyResolve(info)
+@@ -237,7 +237,7 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+   }
+ 
+   void startOnce().catch((err) => {
+-    logger.error(`opencode2dsh: failed to start agent: ${err instanceof Error ? err.message : String(err)}`)
++    logger.error(`OpenCode: failed to start agent: ${err instanceof Error ? err.message : String(err)}`)
+   })
+ 
+   // Register disposer on the plugin fiber so reload/unload/shutdown reaps the
+@@ -270,7 +270,7 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready:
+  * build; then a bare name on PATH.
+  */
+ export function defaultAgentPath(): string {
+-  const bin = 'opencode2dsh-agent'
++  const bin = 'OpenCode-agent'
+   const exe = process.platform === 'win32' ? `${bin}.exe` : bin
+   const here = __dirnameSafe()
+   for (const sibling of [
+diff --git a/packages/plugin/src/ip-pool-settings/apply.ts b/packages/plugin/src/ip-pool-settings/apply.ts
+index e0f8f18..4718438 100644
+--- a/packages/plugin/src/ip-pool-settings/apply.ts
++++ b/packages/plugin/src/ip-pool-settings/apply.ts
+@@ -107,22 +107,22 @@ export function applyIpPoolSettings(
+       void ensureRuntime()
+         .then(() => controller.runtime?.reconfigure(controller.asConfig(value)))
+         .catch((err) => {
+-          logger.warn(`opencode2dsh: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
++          logger.warn(`OpenCode: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
+         })
+       return
+     }
+     if (rt !== null) {
+       void rt.reconfigure(controller.asConfig(value)).catch((err) => {
+-        logger.warn(`opencode2dsh: ip pool live re-apply failed: ${err instanceof Error ? err.message : String(err)}`)
++        logger.warn(`OpenCode: ip pool live re-apply failed: ${err instanceof Error ? err.message : String(err)}`)
+       })
+     }
+   }
+ 
+   if (typeof ctx.settings?.register !== 'function') {
+-    logger.warn('opencode2dsh: settings seam lacks register; ip-pool settings page disabled (patch config still works)')
++    logger.warn('OpenCode: settings seam lacks register; ip-pool settings page disabled (patch config still works)')
+     if (controller.settings().enabled) {
+       void ensureRuntime().catch((err) => {
+-        logger.warn(`opencode2dsh: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
++        logger.warn(`OpenCode: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
+       })
+     }
+     return controller
+@@ -163,7 +163,7 @@ export function applyIpPoolSettings(
+       for (const route of makeBridgeRoutes(handlers)) {
+         disposers.push(bctx.webServer.register(route as never))
+       }
+-      logger.info(`opencode2dsh: ip-pool bridge mounted at ${IP_POOL_BRIDGE_PREFIX} (${disposers.length} routes)`)
++      logger.info(`OpenCode: ip-pool bridge mounted at ${IP_POOL_BRIDGE_PREFIX} (${disposers.length} routes)`)
+       const maybeEffect = (bctx as { effect?: PluginContext['effect'] }).effect
+       if (typeof maybeEffect === 'function') {
+         maybeEffect.call(bctx, () => () => {
+@@ -173,7 +173,7 @@ export function applyIpPoolSettings(
+     })) as unknown as Promise<unknown>
+   }
+ 
+-  logger.info('opencode2dsh: settings namespace "ip-pool" registered — live apply via 设置 → 插件 → IP 池')
++  logger.info('OpenCode: settings namespace "ip-pool" registered — live apply via 设置 → 插件 → IP 池')
+   const maybeEffect = (ctx as { effect?: PluginContext['effect'] }).effect
+   if (typeof maybeEffect === 'function') {
+     maybeEffect.call(ctx, () => () => {
+diff --git a/packages/plugin/src/ip-pool-settings/bridge.ts b/packages/plugin/src/ip-pool-settings/bridge.ts
+index c2a9ded..4ce20da 100644
+--- a/packages/plugin/src/ip-pool-settings/bridge.ts
++++ b/packages/plugin/src/ip-pool-settings/bridge.ts
+@@ -16,7 +16,7 @@ import type { IpPoolRuntime } from '../ip-pool.ts'
+ import type { PoolState, ExitSource } from '../pool/pool.ts'
+ 
+ /** Bridge route prefix (same-origin, loopback-only). */
+-export const IP_POOL_BRIDGE_PREFIX = '/api/opencode2dsh/ip-pool'
++export const IP_POOL_BRIDGE_PREFIX = '/api/OpenCode/ip-pool'
+ 
+ /** Cap on JSON request bodies (a probe trigger is tiny). */
+ const MAX_JSON_BODY_BYTES = 16 * 1024
+diff --git a/packages/plugin/src/ip-pool.ts b/packages/plugin/src/ip-pool.ts
+index 5ce1210..5aa5aa4 100644
+--- a/packages/plugin/src/ip-pool.ts
++++ b/packages/plugin/src/ip-pool.ts
+@@ -28,7 +28,7 @@ import { createRotateDelegate, setRotateDelegate } from './pool/rotate.ts'
+ 
+ /** Data dir shared with the catalog cache (config.ts convention). */
+ function dataDir(): string {
+-  return join(homedir(), '.opencode2dsh')
++  return join(homedir(), '.OpenCode')
+ }
+ 
+ /** Parse one manual proxy string into an exit id + protocol, or null. */
+@@ -144,7 +144,7 @@ export async function startIpPool(
+   try {
+     undici = (await import('undici')) as UndiciSeam
+   } catch (err) {
+-    logger.warn(`opencode2dsh: undici unavailable; exit routing disabled (${err instanceof Error ? err.message : String(err)})`)
++    logger.warn(`OpenCode: undici unavailable; exit routing disabled (${err instanceof Error ? err.message : String(err)})`)
+     return null
+   }
+ 
+@@ -225,7 +225,7 @@ export async function startIpPool(
+         if (!installer.enabled && current.enabled !== false && pool.snapshot().total > 0) {
+           installer.install()
+           if (installer.enabled) {
+-            logger.info('opencode2dsh: first free exits admitted — exit routing engaged')
++            logger.info('OpenCode: first free exits admitted — exit routing engaged')
+           }
+         }
+       })
+@@ -252,7 +252,7 @@ export async function startIpPool(
+   if (pool.snapshot().total > 0) {
+     installer.install()
+   } else {
+-    logger.warn('opencode2dsh: ipPool enabled but no exits configured; staying direct until settings add exits')
++    logger.warn('OpenCode: ipPool enabled but no exits configured; staying direct until settings add exits')
+   }
+   applyConfig()
+ 
+@@ -361,13 +361,13 @@ export async function startIpPool(
+       if (enable && !installer.enabled && pool.snapshot().total > 0) {
+         installer.install()
+         if (installer.enabled) {
+-          logger.info('opencode2dsh: exit routing recovered — global dispatcher is free again (R1)')
++          logger.info('OpenCode: exit routing recovered — global dispatcher is free again (R1)')
+         }
+       } else if (!enable && installer.enabled) {
+         installer.disable()
+       }
+       if (wasEnabled !== enable) {
+-        logger.info(`opencode2dsh: ip pool ${enable ? 'enabled' : 'disabled'} via settings (live)`)
++        logger.info(`OpenCode: ip pool ${enable ? 'enabled' : 'disabled'} via settings (live)`)
+       }
+     },
+     probeAll,
+diff --git a/packages/plugin/src/pool/admission.ts b/packages/plugin/src/pool/admission.ts
+index 9486884..5dffa3e 100644
+--- a/packages/plugin/src/pool/admission.ts
++++ b/packages/plugin/src/pool/admission.ts
+@@ -202,7 +202,7 @@ export async function admitCandidate(
+   const probeHeaders = disguiseHeaders({
+     session: canonicalSessionID(`admission:${candidate.address}`),
+     request: randomID('req', 16),
+-    project: stableID('prj', 'opencode2dsh:default-project'),
++    project: stableID('prj', 'OpenCode:default-project'),
+     parentSession: '',
+   })
+ 
+@@ -326,7 +326,7 @@ export async function admitTrusted(
+   if (result.admitted) return result
+   // Trusted candidates: keep the node (the address is the routing key
+   // fallback, 3.1), warn, and let periodic probing revisit.
+-  deps.logger?.warn(`opencode2dsh: trusted exit ${candidate.address} failed admission (${result.reason}); admitted with ${options.previous?.exitIP ? 'previous' : 'unknown'} exit facts`)
++  deps.logger?.warn(`OpenCode: trusted exit ${candidate.address} failed admission (${result.reason}); admitted with ${options.previous?.exitIP ? 'previous' : 'unknown'} exit facts`)
+   const previous = options.previous
+   return {
+     admitted: true,
+diff --git a/packages/plugin/src/pool/dispatcher.ts b/packages/plugin/src/pool/dispatcher.ts
+index 69b1653..2d86b5f 100644
+--- a/packages/plugin/src/pool/dispatcher.ts
++++ b/packages/plugin/src/pool/dispatcher.ts
+@@ -182,14 +182,14 @@ export class PoolRoutingDispatcher implements RoutingDispatcherSurface {
+       }
+       return agent
+     } catch (err) {
+-      this.#logger?.warn(`opencode2dsh: failed to build proxy agent for ${exitId}: ${err instanceof Error ? err.message : String(err)}`)
++      this.#logger?.warn(`OpenCode: failed to build proxy agent for ${exitId}: ${err instanceof Error ? err.message : String(err)}`)
+       return null
+     }
+   }
+ 
+   dispatch(options: Dispatcher.DispatchOptions, handler: Dispatcher.DispatchHandler): boolean {
+     if (this.#closed) {
+-      handler.onResponseError?.({} as Dispatcher.DispatchController, new Error('opencode2dsh: routing dispatcher closed'))
++      handler.onResponseError?.({} as Dispatcher.DispatchController, new Error('OpenCode: routing dispatcher closed'))
+       return false
+     }
+     const origin = String(options.origin ?? '')
+@@ -270,7 +270,7 @@ export class PoolRoutingDispatcher implements RoutingDispatcherSurface {
+       // response-error the handler owes, so fetch rejects at once, pi-ai
+       // turns that into an error event, and the adapter's rotate loop gets
+       // to move the session to a live exit.
+-      const reason = new Error('opencode2dsh: exit response silence')
++      const reason = new Error('OpenCode: exit response silence')
+       if (typeof handler.onResponseError === 'function') {
+         ;(handler.onResponseError as (c: unknown, e: Error) => void).call(handler, liveController ?? ({} as never), reason)
+       }
+diff --git a/packages/plugin/src/pool/installer.ts b/packages/plugin/src/pool/installer.ts
+index 7db20c1..68022af 100644
+--- a/packages/plugin/src/pool/installer.ts
++++ b/packages/plugin/src/pool/installer.ts
+@@ -96,7 +96,7 @@ export class RoutingInstaller {
+     const foreign = this.#detectForeignDispatcher()
+     if (foreign !== null) {
+       this.#deferredReason = foreign
+-      this.#deps.logger?.warn(`opencode2dsh: exit routing ${foreign}`)
++      this.#deps.logger?.warn(`OpenCode: exit routing ${foreign}`)
+       return
+     }
+     this.#deferredReason = null
+@@ -125,9 +125,9 @@ export class RoutingInstaller {
+     if (typeof moduleFetch === 'function' && globalThis.fetch !== moduleFetch) {
+       this.#savedGlobalFetch = globalThis.fetch
+       ;(globalThis as { fetch: unknown }).fetch = moduleFetch
+-      this.#deps.logger?.info('opencode2dsh: globalThis.fetch -> undici module fetch (built-in fetch bypasses the pool dispatcher otherwise)')
++      this.#deps.logger?.info('OpenCode: globalThis.fetch -> undici module fetch (built-in fetch bypasses the pool dispatcher otherwise)')
+     }
+-    this.#deps.logger?.info('opencode2dsh: global dispatcher -> PoolRoutingDispatcher (exit routing enabled)')
++    this.#deps.logger?.info('OpenCode: global dispatcher -> PoolRoutingDispatcher (exit routing enabled)')
+   }
+ 
+   /** Restore the pre-install dispatcher and close ours. */
+@@ -150,7 +150,7 @@ export class RoutingInstaller {
+     const dying = this.#current
+     this.#current = null
+     if (dying !== null) void dying.destroy().catch(() => {})
+-    this.#deps.logger?.info('opencode2dsh: exit routing disabled; previous global dispatcher restored')
++    this.#deps.logger?.info('OpenCode: exit routing disabled; previous global dispatcher restored')
+   }
+ 
+   /** Full teardown (plugin dispose): same as disable. */
+diff --git a/packages/plugin/src/pool/singbox.ts b/packages/plugin/src/pool/singbox.ts
+index c41cdf6..7a1a3e7 100644
+--- a/packages/plugin/src/pool/singbox.ts
++++ b/packages/plugin/src/pool/singbox.ts
+@@ -390,7 +390,7 @@ export class SingBoxSupervisor {
+         }
+       }
+     }
+-    if (!ready) this.#options.logger?.warn('opencode2dsh: sing-box ports not ready in time; some converted nodes may be unreachable')
++    if (!ready) this.#options.logger?.warn('OpenCode: sing-box ports not ready in time; some converted nodes may be unreachable')
+ 
+     const exits: ConvertedExit[] = []
+     for (const node of nodes) {
+diff --git a/packages/plugin/src/pool/subscription-fetcher.ts b/packages/plugin/src/pool/subscription-fetcher.ts
+index 439fd22..4d54f38 100644
+--- a/packages/plugin/src/pool/subscription-fetcher.ts
++++ b/packages/plugin/src/pool/subscription-fetcher.ts
+@@ -139,10 +139,10 @@ export class SubscriptionFetcher {
+               pending.push(node)
+             }
+           }
+-          this.#logger?.info(`opencode2dsh: subscription parsed ${report.nodes.length} node(s) (${report.detected}) from ${this.#redact(url)}`)
++          this.#logger?.info(`OpenCode: subscription parsed ${report.nodes.length} node(s) (${report.detected}) from ${this.#redact(url)}`)
+         } catch (err) {
+           lastError = err instanceof Error ? err.message : String(err)
+-          this.#logger?.warn(`opencode2dsh: subscription fetch failed for ${this.#redact(url)}: ${lastError}`)
++          this.#logger?.warn(`OpenCode: subscription fetch failed for ${this.#redact(url)}: ${lastError}`)
+         }
+       }
+       this.#state = {
+@@ -181,11 +181,11 @@ export class SubscriptionFetcher {
+               },
+             }))
+           if (tasks.length > 0) await this.#deps.prober.enqueueAll(tasks)
+-          this.#logger?.info(`opencode2dsh: sing-box converted ${exits.length} encrypted node(s); ${this.#state.convertedAdmitted} admitted`)
++          this.#logger?.info(`OpenCode: sing-box converted ${exits.length} encrypted node(s); ${this.#state.convertedAdmitted} admitted`)
+         } catch (err) {
+           const message = err instanceof Error ? err.message : String(err)
+           this.#state.lastError = message
+-          this.#logger?.warn(`opencode2dsh: sing-box conversion failed: ${message}`)
++          this.#logger?.warn(`OpenCode: sing-box conversion failed: ${message}`)
+         }
+       }
+       // Plaintext nodes go through the trusted admission smoke (never the
+diff --git a/packages/plugin/src/provider.ts b/packages/plugin/src/provider.ts
+index adc6901..65869fd 100644
+--- a/packages/plugin/src/provider.ts
++++ b/packages/plugin/src/provider.ts
+@@ -112,7 +112,7 @@ export async function fetchHealth(port: number, timeoutMs = 3000): Promise<unkno
+  * Ensure the credential and the llm-pi-ai provider route reflect the running
+  * agent. Safe to call repeatedly (every refresh): writes are no-ops when the
+  * stored shape already matches, and mutate keeps other namespaces/routes
+- * untouched because it edits only the opencode2dsh subtree.
++ * untouched because it edits only the OpenCode subtree.
+  */
+ export async function registerProvider(
+   seams: DshSeams,
+@@ -123,7 +123,7 @@ export async function registerProvider(
+   await seams.credentials.set(target.apiKeyEnv, token)
+ 
+   const route = {
+-    displayName: 'opencode2dsh',
++    displayName: 'OpenCode',
+     apiKeyEnv: target.apiKeyEnv,
+     api: 'openai-completions',
+     baseURL: providerBaseURL(target.port),
+@@ -132,5 +132,5 @@ export async function registerProvider(
+   await seams.settings.mutate('llm-pi-ai', [
+     { op: 'set', path: ['providers', target.providerId], value: route },
+   ])
+-  seams.logger.info(`opencode2dsh: registered llm-pi-ai provider "${target.providerId}" with ${models.length} model(s) at ${route.baseURL}`)
++  seams.logger.info(`OpenCode: registered llm-pi-ai provider "${target.providerId}" with ${models.length} model(s) at ${route.baseURL}`)
+ }
+diff --git a/packages/plugin/test/client-build.test.ts b/packages/plugin/test/client-build.test.ts
+index dafb7db..4556b2f 100644
+--- a/packages/plugin/test/client-build.test.ts
++++ b/packages/plugin/test/client-build.test.ts
+@@ -24,7 +24,7 @@ test('client bundle is built and well-formed', () => {
+   // A rejected card must not kill the plugin fiber (the boot screen lists the
+   // whole plugin as failed) — the registration is contained with a warn.
+   assert.ok(source.includes('settings card rejected'), 'registration failure is contained, not fatal')
+-  assert.ok(source.includes('/api/opencode2dsh/ip-pool'), 'bridge prefix baked in')
++  assert.ok(source.includes('/api/OpenCode/ip-pool'), 'bridge prefix baked in')
+   assert.ok(/exports\.apply\s*=/.test(source), 'apply exported')
+   assert.ok(/exports\.inject\s*=/.test(source), 'inject exported')
+ })
+diff --git a/packages/plugin/test/events.test.ts b/packages/plugin/test/events.test.ts
+index d887f51..282d7e0 100644
+--- a/packages/plugin/test/events.test.ts
++++ b/packages/plugin/test/events.test.ts
+@@ -13,7 +13,7 @@ function event(message: Record<string, unknown>): PiEvent {
+     type: 'done',
+     message: {
+       api: 'openai-completions',
+-      provider: 'opencode2dsh',
++      provider: 'OpenCode',
+       model: 'qwen-free',
+       content: [{ type: 'text', text: 'hi' }],
+       usage: { input: 10, output: 5, cacheRead: 0, cacheWrite: 0, totalTokens: 15 },
+diff --git a/packages/plugin/test/live-e2e-chat.mts b/packages/plugin/test/live-e2e-chat.mts
+index 08c79c1..bf37d96 100644
+--- a/packages/plugin/test/live-e2e-chat.mts
++++ b/packages/plugin/test/live-e2e-chat.mts
+@@ -65,7 +65,7 @@ const adapter = new ZenAdapter(catalog, { firstEventMs: 20_000, bodyIdleMs: 30_0
+ log('sending message to the agent')
+ const stream = await adapter.stream({
+   model: 'big-pickle',
+-  provider: 'opencode2dsh',
++  provider: 'OpenCode',
+   messages: [{ role: 'user', content: [{ type: 'text', text: '用一句话回答：你收到这条消息了吗？' }] }],
+   temperature: 0,
+   maxTokens: 512,
+diff --git a/packages/plugin/test/live-free-pool-e2e.mts b/packages/plugin/test/live-free-pool-e2e.mts
+index 34ae9fd..4f123cc 100644
+--- a/packages/plugin/test/live-free-pool-e2e.mts
++++ b/packages/plugin/test/live-free-pool-e2e.mts
+@@ -76,7 +76,7 @@ let text = ''
+ let finish: { kind: string; failure?: { message: string } } | null = null
+ try {
+   const stream = await adapter.stream({
+-    model: 'big-pickle', provider: 'opencode2dsh',
++    model: 'big-pickle', provider: 'OpenCode',
+     messages: [{ role: 'user', content: [{ type: 'text', text: '用一句话回答：你收到这条消息了吗？' }] }],
+     temperature: 0, maxTokens: 128,
+   } as never)
+diff --git a/packages/plugin/test/messages.test.ts b/packages/plugin/test/messages.test.ts
+index 10e488a..720be38 100644
+--- a/packages/plugin/test/messages.test.ts
++++ b/packages/plugin/test/messages.test.ts
+@@ -13,7 +13,7 @@ function expectRole(message: PiMessage | undefined, role: PiMessage['role']): Pi
+ }
+ 
+ function options(overrides: Partial<HarnessGenerateOptions> = {}): HarnessGenerateOptions {
+-  return { provider: 'opencode2dsh', model: 'qwen-free', messages: [], ...overrides }
++  return { provider: 'OpenCode', model: 'qwen-free', messages: [], ...overrides }
+ }
+ 
+ test('system messages become leading user text', () => {
+@@ -81,7 +81,7 @@ test('assistant history replays text, thinking and tool calls with parsed argume
+         { type: 'reasoning', text: 'internal scratch' },
+         { type: 'tool-call', id: 't1', name: 'calc', arguments: '{"a":1}' },
+       ],
+-      source: { kind: 'model', provider: 'opencode2dsh', model: 'qwen-free' },
++      source: { kind: 'model', provider: 'OpenCode', model: 'qwen-free' },
+     },
+   ]
+   const context = toPiContext(options({ messages }))
+@@ -172,3 +172,17 @@ test('ensureFreeLaneShape leaves satisfying and non-chat payloads untouched', ()
+   assert.equal(ensureFreeLaneShape(null), undefined)
+   assert.equal(ensureFreeLaneShape('text'), undefined)
+ })
++
++test('ensureFreeLaneShape handles responses API payloads (body.input)', () => {
++  const responsesPayload = {
++    model: 'muse-spark-1.2-contributor-free',
++    input: [{ role: 'user', content: 'hello' }],
++    tools: [],
++  }
++  const next = ensureFreeLaneShape(responsesPayload) as Record<string, unknown>
++  const tools = next.tools as Array<{ type: string; name: string; description: string; parameters: object }>
++  assert.equal(tools.length, 2)
++  assert.deepEqual(tools.map((t) => t.name).sort(), ['bash', 'read'])
++  assert.equal(tools[0]!.type, 'function')
++})
++
+diff --git a/packages/plugin/test/provider.test.ts b/packages/plugin/test/provider.test.ts
+index df928dd..422bfa4 100644
+--- a/packages/plugin/test/provider.test.ts
++++ b/packages/plugin/test/provider.test.ts
+@@ -40,7 +40,7 @@ test('registerProvider stores token and writes the llm-pi-ai route', async () =>
+   }
+   await registerProvider(
+     seams,
+-    { providerId: 'opencode2dsh', apiKeyEnv: 'OPENCODE2DSH_TOKEN', port: 4567 },
++    { providerId: 'OpenCode', apiKeyEnv: 'OPENCODE2DSH_TOKEN', port: 4567 },
+     'tok',
+     [{ id: 'm1', name: 'M1' }],
+   )
+@@ -53,7 +53,7 @@ test('registerProvider stores token and writes the llm-pi-ai route', async () =>
+   assert.ok(setOp, 'expected one set op')
+   assert.equal(op.ns, 'llm-pi-ai')
+   assert.equal(setOp.op, 'set')
+-  assert.deepEqual(setOp.path, ['providers', 'opencode2dsh'])
++  assert.deepEqual(setOp.path, ['providers', 'OpenCode'])
+   assert.equal(setOp.value.baseURL, providerBaseURL(4567))
+   assert.equal(setOp.value.baseURL, 'http://127.0.0.1:4567/v1')
+   assert.equal(setOp.value.apiKeyEnv, 'OPENCODE2DSH_TOKEN')
+@@ -74,18 +74,18 @@ test('removeProviderRoute unsets the sidecar leftover only when present', async
+     logger: { info: () => {}, warn: () => {} },
+   })
+   // no namespace at all
+-  assert.equal(await removeProviderRoute({ settings: makeSeams(undefined).settings }, 'opencode2dsh'), false)
++  assert.equal(await removeProviderRoute({ settings: makeSeams(undefined).settings }, 'OpenCode'), false)
+   // namespace but no providers section
+-  assert.equal(await removeProviderRoute({ settings: makeSeams(undefined).settings }, 'opencode2dsh'), false)
++  assert.equal(await removeProviderRoute({ settings: makeSeams(undefined).settings }, 'OpenCode'), false)
+   // route present -> unset
+-  const seams = makeSeams({ opencode2dsh: { baseURL: 'http://127.0.0.1:6865/v1' }, other: {} })
+-  assert.equal(await removeProviderRoute({ settings: seams.settings }, 'opencode2dsh'), true)
++  const seams = makeSeams({ OpenCode: { baseURL: 'http://127.0.0.1:6865/v1' }, other: {} })
++  assert.equal(await removeProviderRoute({ settings: seams.settings }, 'OpenCode'), true)
+   assert.equal(mutations.length, 1)
+   const mutation = mutations[0]
+   assert.ok(mutation)
+   assert.equal(mutation.ns, 'llm-pi-ai')
+   assert.equal(mutation.ops[0]?.op, 'unset')
+-  assert.deepEqual(mutation.ops[0]?.path, ['providers', 'opencode2dsh'])
++  assert.deepEqual(mutation.ops[0]?.path, ['providers', 'OpenCode'])
+   // other providers untouched: unset is path-scoped, verified by the op above
+ })
+ 
+diff --git a/packages/plugin/test/rotate.test.ts b/packages/plugin/test/rotate.test.ts
+index 5ad37b2..8267ea9 100644
+--- a/packages/plugin/test/rotate.test.ts
++++ b/packages/plugin/test/rotate.test.ts
+@@ -74,7 +74,7 @@ async function collect(adapter: ZenAdapter): Promise<string[]> {
+ const err = (message: string): ScriptedEvent => ({
+   type: 'error',
+   error: {
+-    api: 'openai-completions', provider: 'opencode2dsh', model: 'big-pickle',
++    api: 'openai-completions', provider: 'OpenCode', model: 'big-pickle',
+     content: [], stopReason: 'error', errorMessage: message,
+     usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 },
+   },
+diff --git a/packages/plugin/test/zen-adapter.test.ts b/packages/plugin/test/zen-adapter.test.ts
+index 08956e0..6041043 100644
+--- a/packages/plugin/test/zen-adapter.test.ts
++++ b/packages/plugin/test/zen-adapter.test.ts
+@@ -1,7 +1,7 @@
+ import test from 'node:test'
+ import assert from 'node:assert/strict'
+ import { ModelCatalog } from '../src/adapter/catalog.ts'
+-import { isResponsesModel, PROVIDER_ID, reasoningEfforts, reasoningEffortWire, ZenAdapter } from '../src/adapter/zen-adapter.ts'
++import { isResponsesModel, PROVIDER_ID, reasoningEfforts, reasoningEffortWire, usesResponsesApi, ZenAdapter } from '../src/adapter/zen-adapter.ts'
+ 
+ /**
+  * The exact method surface dsh-llm touches on a registered adapter. A missing
+@@ -17,27 +17,27 @@ test('ZenAdapter implements the full dsh-llm adapter surface', () => {
+ 
+ test('providerInfo preserves the route id and names the provider', () => {
+   const adapter = new ZenAdapter(new ModelCatalog())
+-  assert.deepEqual(adapter.providerInfo('opencode2dsh'), { id: 'opencode2dsh', name: PROVIDER_ID })
++  assert.deepEqual(adapter.providerInfo('OpenCode'), { id: 'OpenCode', name: PROVIDER_ID })
+ })
+ 
+ test('providerRetryPolicy defers to the host default', () => {
+   const adapter = new ZenAdapter(new ModelCatalog())
+-  assert.equal(adapter.providerRetryPolicy('opencode2dsh'), undefined)
++  assert.equal(adapter.providerRetryPolicy('OpenCode'), undefined)
+ })
+ 
+ test('resolveModel declares text-only input and finite limits', () => {
+   const adapter = new ZenAdapter(new ModelCatalog())
+-  const resolved = adapter.resolveModel('opencode2dsh', 'big-pickle')
++  const resolved = adapter.resolveModel('OpenCode', 'big-pickle')
+   assert.deepEqual(resolved.inputModalities, ['text'])
+   assert.equal(resolved.context.contextWindow > 0, true)
+   assert.equal(resolved.defaultMaxTokens > 0, true)
+-  assert.equal(resolved.provider, 'opencode2dsh')
++  assert.equal(resolved.provider, 'OpenCode')
+   assert.equal(resolved.id, 'big-pickle')
+ })
+ 
+ test('prepareCall returns the resolved model and a stream dispatcher', async () => {
+   const adapter = new ZenAdapter(new ModelCatalog())
+-  const call = await adapter.prepareCall('opencode2dsh', 'big-pickle')
++  const call = await adapter.prepareCall('OpenCode', 'big-pickle')
+   assert.equal(call.model.id, 'big-pickle')
+   assert.equal(typeof call.stream, 'function')
+ })
+@@ -48,7 +48,7 @@ test('listModels mirrors the catalog without duplicates', () => {
+     decision: () => ({ allowed: true, source: 'test', known: true }),
+     reasoningCapability: () => ({ reasoning: true, effortValues: [] }),
+   })
+-  const models = adapter.listModels('opencode2dsh')
++  const models = adapter.listModels('OpenCode')
+   assert.deepEqual(models.map((m) => m.id), ['big-pickle', 'mimo-v2.5-free'])
+ })
+ 
+@@ -95,11 +95,11 @@ test('resolveModel advertises the thinking-level picker for reasoning models onl
+       model === 'big-pickle' ? { reasoning: true, effortValues: ['low', 'high'] } : undefined,
+   })
+   assert.deepEqual(
+-    adapter.resolveModel('opencode2dsh', 'big-pickle').reasoning?.efforts.map((e) => e.id),
++    adapter.resolveModel('OpenCode', 'big-pickle').reasoning?.efforts.map((e) => e.id),
+     ['low', 'high'],
+   )
+   // unknown metadata: no reasoning field — dsh-llm then offers only the default
+-  assert.equal(adapter.resolveModel('opencode2dsh', 'ghost').reasoning, undefined)
++  assert.equal(adapter.resolveModel('OpenCode', 'ghost').reasoning, undefined)
+ })
+ 
+ /** Scripted provider that records the streamSimple options it receives. */
+@@ -136,7 +136,7 @@ async function runStream(catalogReasoning: boolean, effort?: string): Promise<Ar
+     },
+     { providerOverride: provider },
+   )
+-  const options = { provider: 'opencode2dsh', model: 'big-pickle', messages: [], temperature: 0, maxTokens: 16 }
++  const options = { provider: 'OpenCode', model: 'big-pickle', messages: [], temperature: 0, maxTokens: 16 }
+   const stream = adapter.stream({ ...options, ...(effort !== undefined ? { reasoningEffort: effort } : {}) } as never)
+   for await (const chunk of stream) void chunk
+   return captured
+@@ -175,9 +175,11 @@ test('stream keeps the free-lane gate rewrite alongside the effort injection', a
+ test('isResponsesModel routes muse-spark to responses, everything else to chat', () => {
+   for (const id of ['muse-spark-1.3-contributor-free', 'muse-spark-1.2-contributor-free', 'muse-spark-1.2', 'MUSE-SPARK-1.3']) {
+     assert.equal(isResponsesModel(id), true, id)
++    assert.equal(usesResponsesApi(id), true, id)
+   }
+   for (const id of ['big-pickle', 'mimo-v2.5-free', 'deepseek-v4-flash', '']) {
+     assert.equal(isResponsesModel(id), false, id || '(empty)')
++    assert.equal(usesResponsesApi(id), false, id || '(empty)')
+   }
+ })
+ 
+@@ -196,12 +198,12 @@ test('responses models use the wider body-idle window, injectable for tests', as
+   }
+   const measure = async (model: string) => {
+     const adapter = new ZenAdapter(
+-      { list: () => [], decision: () => ({ allowed: true, source: 'test', known: true }) },
++      { list: () => [], decision: () => ({ allowed: true, source: 'test', known: true }), reasoningCapability: () => undefined },
+       { providerOverride: { streamSimple: () => hangAfterStart() }, firstEventMs: 50, bodyIdleMs: 50, responsesBodyIdleMs: 400 },
+     )
+     const began = Date.now()
+     let reason: { kind: string } | undefined
+-    for await (const chunk of adapter.stream({ provider: 'opencode2dsh', model, messages: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] })) {
++    for await (const chunk of adapter.stream({ provider: 'OpenCode', model, messages: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] })) {
+       if (chunk.type === 'finish') {
+         reason = chunk.reason as { kind: string }
+         break
+@@ -216,3 +218,4 @@ test('responses models use the wider body-idle window, injectable for tests', as
+   assert.equal(responses.reason?.kind, 'error')
+   assert.ok(responses.elapsed > 350, `responses should honor the injected 400ms window, took ${responses.elapsed}ms`)
+ })
++
