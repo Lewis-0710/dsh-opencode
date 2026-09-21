@@ -114,7 +114,7 @@ function toPiAssistant(message: HarnessMessage, providerId: string): Extract<PiM
         content.push({ type: 'toolCall', id: block.id, name: block.name, arguments: parseArguments(block.arguments) })
         break
       case 'image':
-        throw new Error('opencode2dsh: assistant image output cannot be replayed to a text-only model')
+        throw new Error('OpenCode: assistant image output cannot be replayed to a text-only model')
       default:
         break
     }
@@ -219,6 +219,19 @@ export function freeLaneGateTool(name: (typeof FREE_LANE_GATE_TOOL_NAMES)[number
   }
 }
 
+/** Responses-API variant: flat function shape, no nested `function` object. */
+export function freeLaneGateToolResponses(name: (typeof FREE_LANE_GATE_TOOL_NAMES)[number]) {
+  return {
+    type: 'function',
+    name,
+    description: 'Reserved for the host runtime; do not call it.',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  }
+}
+
 /**
  * Rewrite an outgoing chat-completions payload so it satisfies the free-lane
  * agent-shape gate (wired through pi-ai's onPayload). Appends only the gate
@@ -231,6 +244,19 @@ export function freeLaneGateTool(name: (typeof FREE_LANE_GATE_TOOL_NAMES)[number
 export function ensureFreeLaneShape(payload: unknown): unknown | undefined {
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
   const body = payload as Record<string, unknown>
+  if (Array.isArray(body.input)) {
+    const tools = Array.isArray(body.tools) ? (body.tools as unknown[]) : []
+    const names = new Set(
+      tools.map((tool) => {
+        return typeof tool === 'object' && tool !== null ? (tool as { name?: unknown }).name : undefined
+      }),
+    )
+    const missing = FREE_LANE_GATE_TOOL_NAMES.filter((name) => !names.has(name))
+    if (missing.length === 0) return undefined
+    const next: Record<string, unknown> = { ...body }
+    next.tools = [...tools, ...missing.map((name) => freeLaneGateToolResponses(name))]
+    return next
+  }
   if (!Array.isArray(body.messages)) return undefined
   const tools = Array.isArray(body.tools) ? (body.tools as unknown[]) : []
   const names = new Set(

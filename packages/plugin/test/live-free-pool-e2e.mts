@@ -76,7 +76,7 @@ let text = ''
 let finish: { kind: string; failure?: { message: string } } | null = null
 try {
   const stream = await adapter.stream({
-    model: 'big-pickle', provider: 'opencode2dsh',
+    model: 'big-pickle', provider: 'OpenCode',
     messages: [{ role: 'user', content: [{ type: 'text', text: '用一句话回答：你收到这条消息了吗？' }] }],
     temperature: 0, maxTokens: 128,
   } as never)

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ModelCatalog } from '../src/adapter/catalog.ts'
-import { isResponsesModel, PROVIDER_ID, reasoningEfforts, reasoningEffortWire, ZenAdapter } from '../src/adapter/zen-adapter.ts'
+import { isResponsesModel, PROVIDER_ID, reasoningEfforts, reasoningEffortWire, usesResponsesApi, ZenAdapter } from '../src/adapter/zen-adapter.ts'
 
 /**
  * The exact method surface dsh-llm touches on a registered adapter. A missing
@@ -17,27 +17,27 @@ test('ZenAdapter implements the full dsh-llm adapter surface', () => {
 
 test('providerInfo preserves the route id and names the provider', () => {
   const adapter = new ZenAdapter(new ModelCatalog())
-  assert.deepEqual(adapter.providerInfo('opencode2dsh'), { id: 'opencode2dsh', name: PROVIDER_ID })
+  assert.deepEqual(adapter.providerInfo('OpenCode'), { id: 'OpenCode', name: PROVIDER_ID })
 })
 
 test('providerRetryPolicy defers to the host default', () => {
   const adapter = new ZenAdapter(new ModelCatalog())
-  assert.equal(adapter.providerRetryPolicy('opencode2dsh'), undefined)
+  assert.equal(adapter.providerRetryPolicy('OpenCode'), undefined)
 })
 
 test('resolveModel declares text-only input and finite limits', () => {
   const adapter = new ZenAdapter(new ModelCatalog())
-  const resolved = adapter.resolveModel('opencode2dsh', 'big-pickle')
+  const resolved = adapter.resolveModel('OpenCode', 'big-pickle')
   assert.deepEqual(resolved.inputModalities, ['text'])
   assert.equal(resolved.context.contextWindow > 0, true)
   assert.equal(resolved.defaultMaxTokens > 0, true)
-  assert.equal(resolved.provider, 'opencode2dsh')
+  assert.equal(resolved.provider, 'OpenCode')
   assert.equal(resolved.id, 'big-pickle')
 })
 
 test('prepareCall returns the resolved model and a stream dispatcher', async () => {
   const adapter = new ZenAdapter(new ModelCatalog())
-  const call = await adapter.prepareCall('opencode2dsh', 'big-pickle')
+  const call = await adapter.prepareCall('OpenCode', 'big-pickle')
   assert.equal(call.model.id, 'big-pickle')
   assert.equal(typeof call.stream, 'function')
 })
@@ -48,7 +48,7 @@ test('listModels mirrors the catalog without duplicates', () => {
     decision: () => ({ allowed: true, source: 'test', known: true }),
     reasoningCapability: () => ({ reasoning: true, effortValues: [] }),
   })
-  const models = adapter.listModels('opencode2dsh')
+  const models = adapter.listModels('OpenCode')
   assert.deepEqual(models.map((m) => m.id), ['big-pickle', 'mimo-v2.5-free'])
 })
 
@@ -95,11 +95,11 @@ test('resolveModel advertises the thinking-level picker for reasoning models onl
       model === 'big-pickle' ? { reasoning: true, effortValues: ['low', 'high'] } : undefined,
   })
   assert.deepEqual(
-    adapter.resolveModel('opencode2dsh', 'big-pickle').reasoning?.efforts.map((e) => e.id),
+    adapter.resolveModel('OpenCode', 'big-pickle').reasoning?.efforts.map((e) => e.id),
     ['low', 'high'],
   )
   // unknown metadata: no reasoning field — dsh-llm then offers only the default
-  assert.equal(adapter.resolveModel('opencode2dsh', 'ghost').reasoning, undefined)
+  assert.equal(adapter.resolveModel('OpenCode', 'ghost').reasoning, undefined)
 })
 
 /** Scripted provider that records the streamSimple options it receives. */
@@ -136,7 +136,7 @@ async function runStream(catalogReasoning: boolean, effort?: string): Promise<Ar
     },
     { providerOverride: provider },
   )
-  const options = { provider: 'opencode2dsh', model: 'big-pickle', messages: [], temperature: 0, maxTokens: 16 }
+  const options = { provider: 'OpenCode', model: 'big-pickle', messages: [], temperature: 0, maxTokens: 16 }
   const stream = adapter.stream({ ...options, ...(effort !== undefined ? { reasoningEffort: effort } : {}) } as never)
   for await (const chunk of stream) void chunk
   return captured
@@ -175,9 +175,11 @@ test('stream keeps the free-lane gate rewrite alongside the effort injection', a
 test('isResponsesModel routes muse-spark to responses, everything else to chat', () => {
   for (const id of ['muse-spark-1.3-contributor-free', 'muse-spark-1.2-contributor-free', 'muse-spark-1.2', 'MUSE-SPARK-1.3']) {
     assert.equal(isResponsesModel(id), true, id)
+    assert.equal(usesResponsesApi(id), true, id)
   }
   for (const id of ['big-pickle', 'mimo-v2.5-free', 'deepseek-v4-flash', '']) {
     assert.equal(isResponsesModel(id), false, id || '(empty)')
+    assert.equal(usesResponsesApi(id), false, id || '(empty)')
   }
 })
 
@@ -196,12 +198,12 @@ test('responses models use the wider body-idle window, injectable for tests', as
   }
   const measure = async (model: string) => {
     const adapter = new ZenAdapter(
-      { list: () => [], decision: () => ({ allowed: true, source: 'test', known: true }) },
+      { list: () => [], decision: () => ({ allowed: true, source: 'test', known: true }), reasoningCapability: () => undefined },
       { providerOverride: { streamSimple: () => hangAfterStart() }, firstEventMs: 50, bodyIdleMs: 50, responsesBodyIdleMs: 400 },
     )
     const began = Date.now()
     let reason: { kind: string } | undefined
-    for await (const chunk of adapter.stream({ provider: 'opencode2dsh', model, messages: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] })) {
+    for await (const chunk of adapter.stream({ provider: 'OpenCode', model, messages: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] })) {
       if (chunk.type === 'finish') {
         reason = chunk.reason as { kind: string }
         break
@@ -216,3 +218,4 @@ test('responses models use the wider body-idle window, injectable for tests', as
   assert.equal(responses.reason?.kind, 'error')
   assert.ok(responses.elapsed > 350, `responses should honor the injected 400ms window, took ${responses.elapsed}ms`)
 })
+

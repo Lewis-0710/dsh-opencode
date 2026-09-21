@@ -13,7 +13,7 @@ function expectRole(message: PiMessage | undefined, role: PiMessage['role']): Pi
 }
 
 function options(overrides: Partial<HarnessGenerateOptions> = {}): HarnessGenerateOptions {
-  return { provider: 'opencode2dsh', model: 'qwen-free', messages: [], ...overrides }
+  return { provider: 'OpenCode', model: 'qwen-free', messages: [], ...overrides }
 }
 
 test('system messages become leading user text', () => {
@@ -81,7 +81,7 @@ test('assistant history replays text, thinking and tool calls with parsed argume
         { type: 'reasoning', text: 'internal scratch' },
         { type: 'tool-call', id: 't1', name: 'calc', arguments: '{"a":1}' },
       ],
-      source: { kind: 'model', provider: 'opencode2dsh', model: 'qwen-free' },
+      source: { kind: 'model', provider: 'OpenCode', model: 'qwen-free' },
     },
   ]
   const context = toPiContext(options({ messages }))
@@ -172,3 +172,17 @@ test('ensureFreeLaneShape leaves satisfying and non-chat payloads untouched', ()
   assert.equal(ensureFreeLaneShape(null), undefined)
   assert.equal(ensureFreeLaneShape('text'), undefined)
 })
+
+test('ensureFreeLaneShape handles responses API payloads (body.input)', () => {
+  const responsesPayload = {
+    model: 'muse-spark-1.2-contributor-free',
+    input: [{ role: 'user', content: 'hello' }],
+    tools: [],
+  }
+  const next = ensureFreeLaneShape(responsesPayload) as Record<string, unknown>
+  const tools = next.tools as Array<{ type: string; name: string; description: string; parameters: object }>
+  assert.equal(tools.length, 2)
+  assert.deepEqual(tools.map((t) => t.name).sort(), ['bash', 'read'])
+  assert.equal(tools[0]!.type, 'function')
+})
+

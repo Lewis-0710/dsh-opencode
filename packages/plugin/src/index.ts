@@ -11,7 +11,7 @@ import { applyIpPoolSettings } from './ip-pool-settings/apply.ts'
 import { fetchHealth, fetchModels, registerProvider, removeProviderRoute } from './provider.js'
 
 /**
- * opencode2dsh DSH cordis plugin entry.
+ * OpenCode DSH cordis plugin entry.
  *
  * Two modes (config.mode, default `adapter`):
  *  - adapter: register a DSH LlmAdapter streaming directly from the Zen
@@ -50,7 +50,7 @@ export interface PluginContext {
   on?(event: string, listener: (...args: never[]) => unknown): () => void
 }
 
-export const name = 'opencode2dsh'
+export const name = 'OpenCode'
 export const inject = ['llm', 'credentials', 'settings'] as const
 export function apply(ctx: PluginContext, config: Opencode2dshConfig = {}): { ready: Promise<ReadyInfo> } {
   if (resolveConfig(config).mode === 'sidecar') return applySidecar(ctx, config)
@@ -68,7 +68,7 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
   const ready = Promise.resolve({ port: 0, version: 'adapter' })
 
   if (!ctx.llm || typeof ctx.llm.registerAdapter !== 'function') {
-    logger.error('opencode2dsh: llm service unavailable; adapter mode cannot register')
+    logger.error('OpenCode: llm service unavailable; adapter mode cannot register')
     return { ready }
   }
 
@@ -78,7 +78,7 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
   // cordis.patch.yml; disabled keeps the process byte-for-byte on direct.
   // Lifecycle (assembly on first enable, live reconfigure, dispose) is owned
   // by applyIpPoolSettings through the plugin fiber.
-  const dataDir = join(homedir(), '.opencode2dsh')
+  const dataDir = join(homedir(), '.OpenCode')
   const statusPath = join(dataDir, 'adapter-status.json')
   const writeStatus = (status: CatalogSnapshot, lastError: string): void => {
     void writeFile(
@@ -93,7 +93,7 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
     cachePath: defaultCachePath(dataDir),
     onRefresh: (status, lastError) => {
       writeStatus(status, lastError)
-      if (lastError) logger.warn(`opencode2dsh: catalog refresh issue: ${lastError}`)
+      if (lastError) logger.warn(`OpenCode: catalog refresh issue: ${lastError}`)
     },
   })
   const adapter = new ZenAdapter(catalog)
@@ -112,21 +112,21 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
   // away, even while the catalog is still warming up (listModels is read
   // live at selector time, so models appear as refreshes land).
   ctx.llm.registerAdapter([PROVIDER_ID], adapter)
-  logger.info(`opencode2dsh: adapter registered for "${PROVIDER_ID}" (catalog warms up in background)`)
+  logger.info(`OpenCode: adapter registered for "${PROVIDER_ID}" (catalog warms up in background)`)
   void catalog.start().catch((err) => {
-    logger.error(`opencode2dsh: catalog start failed: ${err instanceof Error ? err.message : String(err)}`)
+    logger.error(`OpenCode: catalog start failed: ${err instanceof Error ? err.message : String(err)}`)
   })
 
-  // A sidecar leftover (llm-pi-ai.providers.opencode2dsh pointing at a dead
+  // A sidecar leftover (llm-pi-ai.providers.OpenCode pointing at a dead
   // local port) would shadow the adapter registration and fail every dispatch
   // with a connection error. Remove it before the route can be used.
   if (ctx.settings) {
     removeProviderRoute({ settings: ctx.settings }, cfg.providerId)
       .then((removed) => {
-        if (removed) logger.info(`opencode2dsh: removed stale sidecar route for "${cfg.providerId}" from llm-pi-ai settings`)
+        if (removed) logger.info(`OpenCode: removed stale sidecar route for "${cfg.providerId}" from llm-pi-ai settings`)
       })
       .catch((err) => {
-        logger.warn(`opencode2dsh: stale route cleanup failed: ${err instanceof Error ? err.message : String(err)}`)
+        logger.warn(`OpenCode: stale route cleanup failed: ${err instanceof Error ? err.message : String(err)}`)
       })
   }
 
@@ -141,7 +141,7 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
 
 function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready: Promise<ReadyInfo> } {
   const cfg = resolveConfig(config)
-  const paths = configPaths(join(homedir(), '.opencode2dsh'))
+  const paths = configPaths(join(homedir(), '.OpenCode'))
   const logger = ctx.logger
 
   let agent: AgentProcess | null = null
@@ -174,7 +174,7 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
       }
       await new Promise((r) => setTimeout(r, 300))
     }
-    logger.warn('opencode2dsh: catalog still pending after timeout; registering whatever the agent exposes now')
+    logger.warn('OpenCode: catalog still pending after timeout; registering whatever the agent exposes now')
   }
 
   async function refreshModels(info: ReadyInfo, token: string, { waitReady = false } = {}): Promise<void> {
@@ -193,10 +193,10 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
           models,
         )
       } else {
-        logger.warn('opencode2dsh: credentials/settings services unavailable; provider route not registered')
+        logger.warn('OpenCode: credentials/settings services unavailable; provider route not registered')
       }
     } catch (err) {
-      logger.warn(`opencode2dsh: model refresh failed: ${err instanceof Error ? err.message : String(err)}`)
+      logger.warn(`OpenCode: model refresh failed: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -221,13 +221,13 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
       onLog,
     })
     agent.on('exit-restart', (delay, crashes) => {
-      logger.warn(`opencode2dsh: agent exited unexpectedly; restarting in ${delay}ms (attempt ${crashes})`)
+      logger.warn(`OpenCode: agent exited unexpectedly; restarting in ${delay}ms (attempt ${crashes})`)
     })
     agent.on('circuit-tripped', (crashes) => {
-      logger.error(`opencode2dsh: agent crashed ${crashes} times consecutively; giving up`)
+      logger.error(`OpenCode: agent crashed ${crashes} times consecutively; giving up`)
     })
     agent.on('state', (state) => {
-      if (state === 'ready') logger.info('opencode2dsh: agent ready')
+      if (state === 'ready') logger.info('OpenCode: agent ready')
     })
     const info = await agent.start()
     readyResolve(info)
@@ -237,7 +237,7 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
   }
 
   void startOnce().catch((err) => {
-    logger.error(`opencode2dsh: failed to start agent: ${err instanceof Error ? err.message : String(err)}`)
+    logger.error(`OpenCode: failed to start agent: ${err instanceof Error ? err.message : String(err)}`)
   })
 
   // Register disposer on the plugin fiber so reload/unload/shutdown reaps the
@@ -270,7 +270,7 @@ function applySidecar(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
  * build; then a bare name on PATH.
  */
 export function defaultAgentPath(): string {
-  const bin = 'opencode2dsh-agent'
+  const bin = 'OpenCode-agent'
   const exe = process.platform === 'win32' ? `${bin}.exe` : bin
   const here = __dirnameSafe()
   for (const sibling of [

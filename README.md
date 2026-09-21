@@ -1,26 +1,35 @@
 <div align="center">
 
-# opencode2dsh
+# OpenCode
 
 **Free OpenCode Zen models, natively inside DSH (DeepSeek Harness).**
 
 No API key. No registration. No extra process.
 
-[![npm](https://img.shields.io/npm/v/@opencode2dsh%2Fdsh-plugin)](https://www.npmjs.com/package/@opencode2dsh/dsh-plugin)
-[![license](https://img.shields.io/npm/l/@opencode2dsh%2Fdsh-plugin)](https://github.com/FishBottle7/opencode2dsh/blob/master/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen)](https://nodejs.org)
-[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/FishBottle7/opencode2dsh)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/Lewis-0710/dsh-opencode)
 
 English | [简体中文](README.zh-CN.md)
 
 </div>
 
+> [!NOTE]
+> **Fork Maintenance Version** | This repository is a fork of [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh).
+>
+> **Differences from Upstream**:
+> 1. Support Responses API routing for Muse Spark models (`/zen/v1/responses`)
+> 2. Provider and plugin branding upgraded to OpenCode
+> 3. Support upstream synchronization workflow (`sync.patch` and `sync.sh`)
+>
+> See [sync.patch](./sync.patch) for details.
+
 ---
 
-opencode2dsh registers a native DSH `LlmAdapter` that streams directly from
+OpenCode registers a native DSH `LlmAdapter` that streams directly from
 [OpenCode Zen](https://opencode.ai/zen)'s **anonymous free lane** — the same
 models OpenCode's own CLI uses without an account, served to your DSH model
-picker as a regular provider called `opencode2dsh`.
+picker as a regular provider called `OpenCode`.
 
 Requests leave your machine looking exactly like traffic from the OpenCode
 CLI (same user agent, same correlation headers), and the model catalog stays
@@ -40,26 +49,19 @@ nothing to host.
 ## Install
 
 **From the plugin market** (recommended, once this repo is listed there):
-in DSH open **Settings → Plugin Market**, search `opencode2dsh`, one-click
+in DSH open **Settings → Plugin Market**, search `OpenCode`, one-click
 install.
 
-**From npm**:
+**From source**:
 
 ```sh
-dsh plugin --profile web add @opencode2dsh/dsh-plugin
-```
-
-**From source** (build the tarball yourself):
-
-```sh
-git clone https://github.com/FishBottle7/opencode2dsh.git
-cd opencode2dsh/packages/plugin
-pnpm install && pnpm pack
-dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+git clone https://github.com/Lewis-0710/dsh-opencode.git
+cd dsh-opencode/packages/plugin
+pnpm install && pnpm build
 ```
 
 **Verify**: restart `dsh web`, open the model picker, and pick a model from
-the **opencode2dsh** group.
+the **OpenCode** group.
 
 Requires DSH (DeepSeek Harness) with a web profile; Node.js ≥ 20 (already
 present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
@@ -69,18 +71,18 @@ present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
 Defaults work out of the box. Override via the profile's `cordis.patch.yml`:
 
 ```yaml
-- id: opencode2dsh
+- id: OpenCode
   name: '@opencode2dsh/dsh-plugin'
   config:
     mode: adapter        # adapter (default) | sidecar
-    providerId: opencode2dsh
+    providerId: OpenCode
     refreshSeconds: 300  # catalog refresh cadence
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `mode` | `adapter` | `adapter`: native LlmAdapter streaming straight from Zen. `sidecar`: legacy local-agent mode, not bundled — build the agent from `legacy/agent` and pass `agentPath`. |
-| `providerId` | `opencode2dsh` | Provider name shown in DSH. |
+| `providerId` | `OpenCode` | Provider name shown in DSH. |
 | `refreshSeconds` | `300` | Live catalog refresh interval. Pricing metadata refreshes every 24 h. |
 | `agentPath` | auto-resolved | Sidecar only: path to the agent binary. |
 | `agentArgs` | — | Sidecar only: extra CLI args for the agent. |

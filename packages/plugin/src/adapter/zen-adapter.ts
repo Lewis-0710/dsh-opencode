@@ -10,7 +10,7 @@ import { routingContext, type RoutingContext } from '../pool/dispatcher.ts'
 import { classifyStreamFailure, isRegionBlocked, shouldRotate } from '../pool/rotate.ts'
 
 /**
- * The TS adapter: registers as a DSH LlmAdapter for the `opencode2dsh` route
+ * The TS adapter: registers as a DSH LlmAdapter for the `OpenCode` route
  * and streams directly from the OpenCode Zen anonymous lane. The wire layer is
  * pi-ai's openai-completions implementation for most models (the same one DSH
  * uses for every OpenAI-compatible provider), plus pi-ai's openai-responses
@@ -21,7 +21,8 @@ import { classifyStreamFailure, isRegionBlocked, shouldRotate } from '../pool/ro
  * prepareCall/stream) — structural, no host import.
  */
 
-export const PROVIDER_ID = 'opencode2dsh'
+export const PROVIDER_ID = 'OpenCode'
+export const PROVIDER_NAME = 'OpenCode'
 
 export interface ZenModelInfo {
   id: string
@@ -108,8 +109,8 @@ const ANONYMOUS_KEY = 'public'
  * carry "timeout" so classifyStreamFailure maps them to 'transport' and
  * the rotate loop gets to move the session to a live exit.
  */
-export const WATCHDOG_FIRST_MESSAGE = 'opencode2dsh: first stream event timeout (exit silent before any response)'
-export const WATCHDOG_IDLE_MESSAGE = 'opencode2dsh: stream body idle timeout (exit went silent mid-response)'
+export const WATCHDOG_FIRST_MESSAGE = 'OpenCode: first stream event timeout (exit silent before any response)'
+export const WATCHDOG_IDLE_MESSAGE = 'OpenCode: stream body idle timeout (exit went silent mid-response)'
 
 /** Default watchdog windows (docs/ip-pool.md; test-injectable via constructor). */
 export const DEFAULT_FIRST_EVENT_MS = 30_000
@@ -122,6 +123,18 @@ export const DEFAULT_BODY_IDLE_MS = 120_000
  * waiting out five real minutes.
  */
 export const RESPONSES_BODY_IDLE_MS = 300_000
+
+/**
+ * Responses-only models on Zen (issue #7): `muse-spark-*` return a bare 500
+ * on `POST /zen/v1/chat/completions` but 200 on `POST /zen/v1/responses`
+ * (opencode #44659/#44847, DSH #3957). Route by model id; extend this list
+ * if Zen moves more models (candidates: gpt-5.6-luna, grok-4.6).
+ */
+export function isResponsesModel(id: string): boolean {
+  return String(id ?? '').toLowerCase().startsWith('muse-spark')
+}
+
+export const usesResponsesApi = isResponsesModel
 
 /** The terminal error event pi-ai owes but never sent (watchdog teardown). */
 function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
@@ -139,17 +152,7 @@ function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
   }
 }
 
-/**
- * Responses-only models on Zen (issue #7): `muse-spark-*` return a bare 500
- * on `POST /zen/v1/chat/completions` but 200 on `POST /zen/v1/responses`
- * (opencode #44659/#44847, DSH #3957). Route by model id; extend this list
- * if Zen moves more models (candidates: gpt-5.6-luna, grok-4.6).
- */
-export function isResponsesModel(id: string): boolean {
-  return String(id ?? '').toLowerCase().startsWith('muse-spark')
-}
-
-function toPiModel(id: string, reasoning: boolean): Model<Api> {
+export function toPiModel(id: string, reasoning: boolean): Model<Api> {
   const isResponses = isResponsesModel(id)
   return {
     id,
@@ -204,7 +207,7 @@ export class ZenAdapter {
     }
     this.#provider = createProvider<Api>({
       id: PROVIDER_ID,
-      name: PROVIDER_ID,
+      name: PROVIDER_NAME,
       baseUrl,
       auth,
       models: [],
@@ -212,7 +215,7 @@ export class ZenAdapter {
     })
     this.#responsesProvider = createProvider<Api>({
       id: PROVIDER_ID,
-      name: PROVIDER_ID,
+      name: PROVIDER_NAME,
       baseUrl,
       auth,
       models: [],
@@ -221,7 +224,7 @@ export class ZenAdapter {
   }
 
   providerInfo(provider: string): { id: string; name: string } {
-    return { id: provider, name: PROVIDER_ID }
+    return { id: provider, name: PROVIDER_NAME }
   }
 
   /**
@@ -450,13 +453,13 @@ export class ZenAdapter {
           const e = buffered[i] as PiEvent & { error?: { errorMessage?: string }; message?: { errorMessage?: string; stopReason?: string } }
           if (e.type === 'error' && e.error) {
             e.error.errorMessage = rotateStory.length > 1
-              ? `${e.error.errorMessage} (opencode2dsh 轮换 ${rotateStory.length - 1} 次后放弃: ${rotateStory.join(' -> ')})`
+              ? `${e.error.errorMessage} (OpenCode 轮换 ${rotateStory.length - 1} 次后放弃: ${rotateStory.join(' -> ')})`
               : e.error.errorMessage
             break
           }
           if (e.type === 'done' && e.message?.stopReason === 'error') {
             e.message.errorMessage = rotateStory.length > 1
-              ? `${e.message.errorMessage} (opencode2dsh 轮换 ${rotateStory.length - 1} 次后放弃: ${rotateStory.join(' -> ')})`
+              ? `${e.message.errorMessage} (OpenCode 轮换 ${rotateStory.length - 1} 次后放弃: ${rotateStory.join(' -> ')})`
               : e.message.errorMessage!
             break
           }

@@ -107,22 +107,22 @@ export function applyIpPoolSettings(
       void ensureRuntime()
         .then(() => controller.runtime?.reconfigure(controller.asConfig(value)))
         .catch((err) => {
-          logger.warn(`opencode2dsh: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
+          logger.warn(`OpenCode: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
         })
       return
     }
     if (rt !== null) {
       void rt.reconfigure(controller.asConfig(value)).catch((err) => {
-        logger.warn(`opencode2dsh: ip pool live re-apply failed: ${err instanceof Error ? err.message : String(err)}`)
+        logger.warn(`OpenCode: ip pool live re-apply failed: ${err instanceof Error ? err.message : String(err)}`)
       })
     }
   }
 
   if (typeof ctx.settings?.register !== 'function') {
-    logger.warn('opencode2dsh: settings seam lacks register; ip-pool settings page disabled (patch config still works)')
+    logger.warn('OpenCode: settings seam lacks register; ip-pool settings page disabled (patch config still works)')
     if (controller.settings().enabled) {
       void ensureRuntime().catch((err) => {
-        logger.warn(`opencode2dsh: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
+        logger.warn(`OpenCode: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
       })
     }
     return controller
@@ -163,7 +163,7 @@ export function applyIpPoolSettings(
       for (const route of makeBridgeRoutes(handlers)) {
         disposers.push(bctx.webServer.register(route as never))
       }
-      logger.info(`opencode2dsh: ip-pool bridge mounted at ${IP_POOL_BRIDGE_PREFIX} (${disposers.length} routes)`)
+      logger.info(`OpenCode: ip-pool bridge mounted at ${IP_POOL_BRIDGE_PREFIX} (${disposers.length} routes)`)
       const maybeEffect = (bctx as { effect?: PluginContext['effect'] }).effect
       if (typeof maybeEffect === 'function') {
         maybeEffect.call(bctx, () => () => {
@@ -173,7 +173,7 @@ export function applyIpPoolSettings(
     })) as unknown as Promise<unknown>
   }
 
-  logger.info('opencode2dsh: settings namespace "ip-pool" registered — live apply via 设置 → 插件 → IP 池')
+  logger.info('OpenCode: settings namespace "ip-pool" registered — live apply via 设置 → 插件 → IP 池')
   const maybeEffect = (ctx as { effect?: PluginContext['effect'] }).effect
   if (typeof maybeEffect === 'function') {
     maybeEffect.call(ctx, () => () => {

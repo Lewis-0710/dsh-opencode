@@ -28,7 +28,7 @@ import { createRotateDelegate, setRotateDelegate } from './pool/rotate.ts'
 
 /** Data dir shared with the catalog cache (config.ts convention). */
 function dataDir(): string {
-  return join(homedir(), '.opencode2dsh')
+  return join(homedir(), '.OpenCode')
 }
 
 /** Parse one manual proxy string into an exit id + protocol, or null. */
@@ -144,7 +144,7 @@ export async function startIpPool(
   try {
     undici = (await import('undici')) as UndiciSeam
   } catch (err) {
-    logger.warn(`opencode2dsh: undici unavailable; exit routing disabled (${err instanceof Error ? err.message : String(err)})`)
+    logger.warn(`OpenCode: undici unavailable; exit routing disabled (${err instanceof Error ? err.message : String(err)})`)
     return null
   }
 
@@ -225,7 +225,7 @@ export async function startIpPool(
         if (!installer.enabled && current.enabled !== false && pool.snapshot().total > 0) {
           installer.install()
           if (installer.enabled) {
-            logger.info('opencode2dsh: first free exits admitted — exit routing engaged')
+            logger.info('OpenCode: first free exits admitted — exit routing engaged')
           }
         }
       })
@@ -252,7 +252,7 @@ export async function startIpPool(
   if (pool.snapshot().total > 0) {
     installer.install()
   } else {
-    logger.warn('opencode2dsh: ipPool enabled but no exits configured; staying direct until settings add exits')
+    logger.warn('OpenCode: ipPool enabled but no exits configured; staying direct until settings add exits')
   }
   applyConfig()
 
@@ -361,13 +361,13 @@ export async function startIpPool(
       if (enable && !installer.enabled && pool.snapshot().total > 0) {
         installer.install()
         if (installer.enabled) {
-          logger.info('opencode2dsh: exit routing recovered — global dispatcher is free again (R1)')
+          logger.info('OpenCode: exit routing recovered — global dispatcher is free again (R1)')
         }
       } else if (!enable && installer.enabled) {
         installer.disable()
       }
       if (wasEnabled !== enable) {
-        logger.info(`opencode2dsh: ip pool ${enable ? 'enabled' : 'disabled'} via settings (live)`)
+        logger.info(`OpenCode: ip pool ${enable ? 'enabled' : 'disabled'} via settings (live)`)
       }
     },
     probeAll,

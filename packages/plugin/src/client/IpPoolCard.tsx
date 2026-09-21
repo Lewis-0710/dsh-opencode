@@ -83,7 +83,7 @@ export interface PoolStatusView {
 }
 
 /** The bridge prefix (same-origin, loopback-only on the host). */
-const BRIDGE_PREFIX = '/api/opencode2dsh/ip-pool'
+const BRIDGE_PREFIX = '/api/OpenCode/ip-pool'
 
 const DEFAULTS: IpPoolSettingsValue = {
   enabled: false,

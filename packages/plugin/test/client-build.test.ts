@@ -24,7 +24,7 @@ test('client bundle is built and well-formed', () => {
   // A rejected card must not kill the plugin fiber (the boot screen lists the
   // whole plugin as failed) — the registration is contained with a warn.
   assert.ok(source.includes('settings card rejected'), 'registration failure is contained, not fatal')
-  assert.ok(source.includes('/api/opencode2dsh/ip-pool'), 'bridge prefix baked in')
+  assert.ok(source.includes('/api/OpenCode/ip-pool'), 'bridge prefix baked in')
   assert.ok(/exports\.apply\s*=/.test(source), 'apply exported')
   assert.ok(/exports\.inject\s*=/.test(source), 'inject exported')
 })

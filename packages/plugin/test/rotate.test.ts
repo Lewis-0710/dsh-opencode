@@ -74,7 +74,7 @@ async function collect(adapter: ZenAdapter): Promise<string[]> {
 const err = (message: string): ScriptedEvent => ({
   type: 'error',
   error: {
-    api: 'openai-completions', provider: 'opencode2dsh', model: 'big-pickle',
+    api: 'openai-completions', provider: 'OpenCode', model: 'big-pickle',
     content: [], stopReason: 'error', errorMessage: message,
     usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 },
   },

@@ -1,25 +1,34 @@
 <div align="center">
 
-# opencode2dsh
+# OpenCode
 
 **在 DSH（DeepSeek Harness）里原生使用 OpenCode Zen 的免费匿名模型。**
 
 无需 API Key。无需注册。无需额外进程。
 
-[![npm](https://img.shields.io/npm/v/@opencode2dsh%2Fdsh-plugin)](https://www.npmjs.com/package/@opencode2dsh/dsh-plugin)
-[![license](https://img.shields.io/npm/l/@opencode2dsh%2Fdsh-plugin)](https://github.com/FishBottle7/opencode2dsh/blob/master/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen)](https://nodejs.org)
-[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/FishBottle7/opencode2dsh)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/Lewis-0710/dsh-opencode)
 
 [English](README.md) | 简体中文
 
 </div>
 
+> [!NOTE]
+> **Fork 维护版本** | 本仓库是 [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh) 的维护分支。
+>
+> **与上游差异**：
+> 1. 支持 Muse Spark 系列模型的 Responses API 调用 (`/zen/v1/responses`)
+> 2. 提供者与插件名称升级为 OpenCode
+> 3. 支持上游同步机制（`sync.patch` 与 `sync.sh`）
+>
+> 详见 [sync.patch](./sync.patch)。
+
 ---
 
-opencode2dsh 会向 DSH 注册一个原生的 `LlmAdapter`，直接流式对接
+OpenCode 会向 DSH 注册一个原生的 `LlmAdapter`，直接流式对接
 [OpenCode Zen](https://opencode.ai/zen) 的**匿名免费通道**——也就是
-OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以 `opencode2dsh`
+OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以 `OpenCode`
 这个常规 provider 出现在你的 DSH 模型选择器里。
 
 插件发出的请求与 OpenCode CLI 的流量完全同形（相同的 User-Agent、相同的
@@ -39,24 +48,17 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
 ## 安装
 
 **从插件市场安装**（推荐，收录后可用）：在 DSH 里打开 **设置 → 插件市场**，
-搜索 `opencode2dsh`，一键安装。
+搜索 `OpenCode`，一键安装。
 
-**从 npm 安装**：
-
-```sh
-dsh plugin --profile web add @opencode2dsh/dsh-plugin
-```
-
-**从源码安装**（自行打包）：
+**从源码安装**：
 
 ```sh
-git clone https://github.com/FishBottle7/opencode2dsh.git
-cd opencode2dsh/packages/plugin
-pnpm install && pnpm pack
-dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+git clone https://github.com/Lewis-0710/dsh-opencode.git
+cd dsh-opencode/packages/plugin
+pnpm install && pnpm build
 ```
 
-**验证**：重启 `dsh web`，打开模型选择器，在 **opencode2dsh** 分组里选模型即可。
+**验证**：重启 `dsh web`，打开模型选择器，在 **OpenCode** 分组里选模型即可。
 
 需要带 web profile 的 DSH（DeepSeek Harness）；Node.js ≥ 20（DSH 能跑就满足）；
 出站 HTTPS 需可达 `opencode.ai` 与 `models.dev`。
@@ -66,18 +68,18 @@ dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
 默认配置开箱即用。需要覆盖时，编辑 profile 的 `cordis.patch.yml`：
 
 ```yaml
-- id: opencode2dsh
+- id: OpenCode
   name: '@opencode2dsh/dsh-plugin'
   config:
     mode: adapter        # adapter（默认）| sidecar
-    providerId: opencode2dsh
+    providerId: OpenCode
     refreshSeconds: 300  # 目录刷新周期（秒）
 ```
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `mode` | `adapter` | `adapter`：原生 LlmAdapter 直连 Zen。`sidecar`：旧版本地 agent 模式，不随包发行——请从 `legacy/agent` 自行构建并通过 `agentPath` 指定。 |
-| `providerId` | `opencode2dsh` | 在 DSH 中显示的 provider 名称。 |
+| `providerId` | `OpenCode` | 在 DSH 中显示的 provider 名称。 |
 | `refreshSeconds` | `300` | 实时目录刷新间隔；定价元数据每 24 小时刷新。 |
 | `agentPath` | 自动解析 | 仅 sidecar：agent 二进制路径。 |
 | `agentArgs` | — | 仅 sidecar：传给 agent 的额外 CLI 参数。 |
