@@ -17,10 +17,12 @@
 > [!NOTE]
 > **Fork 维护版本** | 本仓库是 [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh) 的维护分支。
 >
-> **与上游差异**：
-> 1. 支持 Muse Spark 系列模型的 Responses API 调用 (`/zen/v1/responses`)
-> 2. 提供者与插件名称升级为 OpenCode
-> 3. 支持上游同步机制（`sync.patch` 与 `sync.sh`）
+> **与上游主要差异与定制增强**：
+> 1. **全局品牌与名称规范化（OpenCode）**：将所有 Provider ID、显示名称、插件配置项（`cordis.patch.yml`）、API 路由端点（`/api/OpenCode/ip-pool`）及前端 UI 文案统一由 `opencode2dsh` 替换升级为 `OpenCode`。
+> 2. **完善 Responses API 免费通道 Gate 伪装**：补齐上游遗漏的 Responses API 请求体（`body.input`）免费通道 Gate 工具注入（`freeLaneGateToolResponses` 与 `ensureFreeLaneShape`），避免 Muse Spark 系列模型调用时因缺少 gate tools 被上游拦截 403。
+> 3. **修复上游测试用例缺陷**：修复 upstream PR #8 中 mock catalog 缺失 `reasoningCapability` 导致的单元测试崩溃问题，保障测试套件稳定通过。
+> 4. **上游同步与补丁体系（sync.sh / sync.patch）**：内置基于“Patch-First, Smart-Merge”策略的自动同步脚本与干净 patch 快照，方便一键跟随上游最新更新。
+> 5. **DSH Desktop 运行环境深度适配**：优化桌面端 Profile 与 workspace overrides 兼容性，确保插件在桌面环境下稳定持久运行。
 >
 > 详见 [sync.patch](./sync.patch)。
 

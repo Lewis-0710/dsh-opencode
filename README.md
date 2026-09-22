@@ -15,12 +15,14 @@ English | [简体中文](README.zh-CN.md)
 </div>
 
 > [!NOTE]
-> **Fork Maintenance Version** | This repository is a fork of [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh).
+> **Fork Maintenance Version** | This repository is a maintained fork of [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh).
 >
-> **Differences from Upstream**:
-> 1. Support Responses API routing for Muse Spark models (`/zen/v1/responses`)
-> 2. Provider and plugin branding upgraded to OpenCode
-> 3. Support upstream synchronization workflow (`sync.patch` and `sync.sh`)
+> **Key Differences and Custom Enhancements**:
+> 1. **OpenCode Rebranding**: All Provider IDs, display names, plugin configs (`cordis.patch.yml`), API bridge endpoints (`/api/OpenCode/ip-pool`), and UI text are consistently upgraded from `opencode2dsh` to `OpenCode`.
+> 2. **Responses API Free-Lane Gate Injection**: Implements missing Responses API (`body.input`) gate tools injection (`freeLaneGateToolResponses` and `ensureFreeLaneShape`), preventing 403 FreeTierError on Muse Spark models.
+> 3. **Fix Upstream Test Defect**: Fixed mock catalog missing `reasoningCapability` method from upstream PR #8, keeping all test suites passing cleanly.
+> 4. **Upstream Sync Workflow (`sync.sh` & `sync.patch`)**: Built-in automated "Patch-First, Smart-Merge" sync script and clean patch snapshot for effortless upstream updates.
+> 5. **DSH Desktop Deep Integration**: Fully adapted for DSH Desktop profile bundles and workspace overrides, preventing accidental unlinking during market operations.
 >
 > See [sync.patch](./sync.patch) for details.
 
