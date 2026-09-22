@@ -1,8 +1,8 @@
 diff --git a/README.md b/README.md
-index cf61160..c16db6e 100644
+index cf61160..fc7a13f 100644
 --- a/README.md
 +++ b/README.md
-@@ -1,26 +1,35 @@
+@@ -1,26 +1,37 @@
  <div align="center">
  
 -# opencode2dsh
@@ -24,12 +24,14 @@ index cf61160..c16db6e 100644
  </div>
  
 +> [!NOTE]
-+> **Fork Maintenance Version** | This repository is a fork of [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh).
++> **Fork Maintenance Version** | This repository is a maintained fork of [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh).
 +>
-+> **Differences from Upstream**:
-+> 1. Support Responses API routing for Muse Spark models (`/zen/v1/responses`)
-+> 2. Provider and plugin branding upgraded to OpenCode
-+> 3. Support upstream synchronization workflow (`sync.patch` and `sync.sh`)
++> **Key Differences and Custom Enhancements**:
++> 1. **OpenCode Rebranding**: All Provider IDs, display names, plugin configs (`cordis.patch.yml`), API bridge endpoints (`/api/OpenCode/ip-pool`), and UI text are consistently upgraded from `opencode2dsh` to `OpenCode`.
++> 2. **Responses API Free-Lane Gate Injection**: Implements missing Responses API (`body.input`) gate tools injection (`freeLaneGateToolResponses` and `ensureFreeLaneShape`), preventing 403 FreeTierError on Muse Spark models.
++> 3. **Fix Upstream Test Defect**: Fixed mock catalog missing `reasoningCapability` method from upstream PR #8, keeping all test suites passing cleanly.
++> 4. **Upstream Sync Workflow (`sync.sh` & `sync.patch`)**: Built-in automated "Patch-First, Smart-Merge" sync script and clean patch snapshot for effortless upstream updates.
++> 5. **DSH Desktop Deep Integration**: Fully adapted for DSH Desktop profile bundles and workspace overrides, preventing accidental unlinking during market operations.
 +>
 +> See [sync.patch](./sync.patch) for details.
 +
@@ -44,7 +46,7 @@ index cf61160..c16db6e 100644
  
  Requests leave your machine looking exactly like traffic from the OpenCode
  CLI (same user agent, same correlation headers), and the model catalog stays
-@@ -40,26 +49,19 @@ nothing to host.
+@@ -40,26 +51,19 @@ nothing to host.
  ## Install
  
  **From the plugin market** (recommended, once this repo is listed there):
@@ -77,7 +79,7 @@ index cf61160..c16db6e 100644
  
  Requires DSH (DeepSeek Harness) with a web profile; Node.js ≥ 20 (already
  present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
-@@ -69,18 +71,18 @@ present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
+@@ -69,18 +73,18 @@ present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
  Defaults work out of the box. Override via the profile's `cordis.patch.yml`:
  
  ```yaml
@@ -100,10 +102,10 @@ index cf61160..c16db6e 100644
  | `agentPath` | auto-resolved | Sidecar only: path to the agent binary. |
  | `agentArgs` | — | Sidecar only: extra CLI args for the agent. |
 diff --git a/README.zh-CN.md b/README.zh-CN.md
-index cb7603f..9c5ee02 100644
+index cb7603f..26d8a1c 100644
 --- a/README.zh-CN.md
 +++ b/README.zh-CN.md
-@@ -1,25 +1,34 @@
+@@ -1,25 +1,36 @@
  <div align="center">
  
 -# opencode2dsh
@@ -127,10 +129,12 @@ index cb7603f..9c5ee02 100644
 +> [!NOTE]
 +> **Fork 维护版本** | 本仓库是 [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh) 的维护分支。
 +>
-+> **与上游差异**：
-+> 1. 支持 Muse Spark 系列模型的 Responses API 调用 (`/zen/v1/responses`)
-+> 2. 提供者与插件名称升级为 OpenCode
-+> 3. 支持上游同步机制（`sync.patch` 与 `sync.sh`）
++> **与上游主要差异与定制增强**：
++> 1. **全局品牌与名称规范化（OpenCode）**：将所有 Provider ID、显示名称、插件配置项（`cordis.patch.yml`）、API 路由端点（`/api/OpenCode/ip-pool`）及前端 UI 文案统一由 `opencode2dsh` 替换升级为 `OpenCode`。
++> 2. **完善 Responses API 免费通道 Gate 伪装**：补齐上游遗漏的 Responses API 请求体（`body.input`）免费通道 Gate 工具注入（`freeLaneGateToolResponses` 与 `ensureFreeLaneShape`），避免 Muse Spark 系列模型调用时因缺少 gate tools 被上游拦截 403。
++> 3. **修复上游测试用例缺陷**：修复 upstream PR #8 中 mock catalog 缺失 `reasoningCapability` 导致的单元测试崩溃问题，保障测试套件稳定通过。
++> 4. **上游同步与补丁体系（sync.sh / sync.patch）**：内置基于“Patch-First, Smart-Merge”策略的自动同步脚本与干净 patch 快照，方便一键跟随上游最新更新。
++> 5. **DSH Desktop 运行环境深度适配**：优化桌面端 Profile 与 workspace overrides 兼容性，确保插件在桌面环境下稳定持久运行。
 +>
 +> 详见 [sync.patch](./sync.patch)。
 +
@@ -144,7 +148,7 @@ index cb7603f..9c5ee02 100644
  这个常规 provider 出现在你的 DSH 模型选择器里。
  
  插件发出的请求与 OpenCode CLI 的流量完全同形（相同的 User-Agent、相同的
-@@ -39,24 +48,17 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
+@@ -39,24 +50,17 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
  ## 安装
  
  **从插件市场安装**（推荐，收录后可用）：在 DSH 里打开 **设置 → 插件市场**，
@@ -175,7 +179,7 @@ index cb7603f..9c5ee02 100644
  
  需要带 web profile 的 DSH（DeepSeek Harness）；Node.js ≥ 20（DSH 能跑就满足）；
  出站 HTTPS 需可达 `opencode.ai` 与 `models.dev`。
-@@ -66,18 +68,18 @@ dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+@@ -66,18 +70,18 @@ dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
  默认配置开箱即用。需要覆盖时，编辑 profile 的 `cordis.patch.yml`：
  
  ```yaml
