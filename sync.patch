@@ -245,6 +245,20 @@ index 22c5c6f..ab0f134 100644
 +    - id: OpenCode
        name: '@opencode2dsh/dsh-plugin'
        config: {}
+diff --git a/packages/plugin/package.json b/packages/plugin/package.json
+index 0944973..861b63b 100644
+--- a/packages/plugin/package.json
++++ b/packages/plugin/package.json
+@@ -35,8 +35,7 @@
+     "client": {
+       "inject": [
+         "slots",
+-        "locale",
+-        "settingsScope"
++        "locale"
+       ],
+       "platform": "web"
+     }
 diff --git a/packages/plugin/src/adapter/events.ts b/packages/plugin/src/adapter/events.ts
 index bb7e7c5..0e70909 100644
 --- a/packages/plugin/src/adapter/events.ts
@@ -451,7 +465,7 @@ index 7ce7eca..605b712 100644
  const DEFAULTS: IpPoolSettingsValue = {
    enabled: false,
 diff --git a/packages/plugin/src/client/index.ts b/packages/plugin/src/client/index.ts
-index 3b5997e..df78acd 100644
+index 3b5997e..8c2b3cb 100644
 --- a/packages/plugin/src/client/index.ts
 +++ b/packages/plugin/src/client/index.ts
 @@ -1,5 +1,5 @@
@@ -461,16 +475,55 @@ index 3b5997e..df78acd 100644
   * 设置 → 插件 → 可配置插件 via the `settings.plugin.item` slot (declared at
   * runtime by @deepseek-ai/dsh-client-ui-settings-plugins), keyed by the
   * `ip-pool` namespace this plugin's Host half registers.
-@@ -51,7 +51,7 @@ export const inject = ['slots', 'locale', 'settingsScope']
+@@ -43,7 +43,20 @@ const NS = 'settings.ip-pool'
+ const SETTINGS_NAMESPACE = 'ip-pool'
+ 
+ /** Required services (cordis fiber inject). */
+-export const inject = ['slots', 'locale', 'settingsScope']
++export const inject = ['slots', 'locale']
++
++function resolveService<T = unknown>(ctx: ClientContext, name: string): T | undefined {
++  try {
++    if (typeof (ctx as unknown as { get?: (name: string) => unknown }).get === 'function') {
++      const svc = (ctx as unknown as { get: (name: string) => unknown }).get(name)
++      if (svc !== undefined) return svc as T
++    }
++  } catch {}
++  try {
++    return (ctx as unknown as Record<string, unknown>)[name] as T
++  } catch {}
++  return undefined
++}
+ 
+ /**
+  * Register the IP 池 plugin card once the `settings.plugin.item` declaration
+@@ -51,9 +64,23 @@ export const inject = ['slots', 'locale', 'settingsScope']
   * @param ctx - client root context.
   */
  export function apply(ctx: ClientContext): void {
 -  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'opencode2dsh: copy dictionaries')
 +  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'OpenCode: copy dictionaries')
  
-   const scope = ctx.settingsScope.bind({ namespace: SETTINGS_NAMESPACE }) as unknown as IpPoolCardInjected['scope']
+-  const scope = ctx.settingsScope.bind({ namespace: SETTINGS_NAMESPACE }) as unknown as IpPoolCardInjected['scope']
++  const configForms = resolveService<{ get(namespace: string): unknown }>(ctx, 'configForms')
++  const settingsScope = resolveService<{ bind(spec: { namespace: string }): unknown }>(ctx, 'settingsScope')
++  const scope = (
++    configForms && typeof configForms.get === 'function'
++      ? configForms.get(SETTINGS_NAMESPACE)
++      : settingsScope && typeof settingsScope.bind === 'function'
++        ? settingsScope.bind({ namespace: SETTINGS_NAMESPACE })
++        : {
++            getSnapshot: () => ({ status: 'unavailable', value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' }),
++            subscribe: () => () => {},
++            set: async () => false,
++            unset: async () => false,
++            mutate: async () => false,
++          }
++  ) as unknown as IpPoolCardInjected['scope']
    // The scope's methods are instance methods (this-bound to the controller);
-@@ -85,7 +85,7 @@ export function apply(ctx: ClientContext): void {
+   // uSES receives them as bare functions, so bind explicitly — an unbound
+   // getSnapshot reads `this.store` of undefined and crashes the card.
+@@ -85,7 +112,7 @@ export function apply(ctx: ClientContext): void {
        // era, so the call goes through the wide component-erased face.
        yield (ctx.slots.register as (o: typeof options, c: typeof IpPoolCard) => () => void)(options, IpPoolCard)
      } catch (err) {
@@ -934,7 +987,7 @@ index adc6901..65869fd 100644
 +  seams.logger.info(`OpenCode: registered llm-pi-ai provider "${target.providerId}" with ${models.length} model(s) at ${route.baseURL}`)
  }
 diff --git a/packages/plugin/test/client-build.test.ts b/packages/plugin/test/client-build.test.ts
-index dafb7db..4556b2f 100644
+index dafb7db..7d28c02 100644
 --- a/packages/plugin/test/client-build.test.ts
 +++ b/packages/plugin/test/client-build.test.ts
 @@ -24,7 +24,7 @@ test('client bundle is built and well-formed', () => {
@@ -945,6 +998,14 @@ index dafb7db..4556b2f 100644
 +  assert.ok(source.includes('/api/OpenCode/ip-pool'), 'bridge prefix baked in')
    assert.ok(/exports\.apply\s*=/.test(source), 'apply exported')
    assert.ok(/exports\.inject\s*=/.test(source), 'inject exported')
+ })
+@@ -51,6 +51,6 @@ test('client manifest is declared in package.json', () => {
+   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+   assert.ok(pkg.dsh?.client, 'dsh.client manifest missing')
+   assert.equal(pkg.dsh.client.platform, 'web')
+-  assert.deepEqual(pkg.dsh.client.inject, ['slots', 'locale', 'settingsScope'])
++  assert.deepEqual(pkg.dsh.client.inject, ['slots', 'locale'])
+   assert.deepEqual(pkg.exports?.['./client'], './lib/client.js')
  })
 diff --git a/packages/plugin/test/events.test.ts b/packages/plugin/test/events.test.ts
 index d887f51..282d7e0 100644
