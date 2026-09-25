@@ -43,7 +43,20 @@ const NS = 'settings.ip-pool'
 const SETTINGS_NAMESPACE = 'ip-pool'
 
 /** Required services (cordis fiber inject). */
-export const inject = ['slots', 'locale', 'settingsScope']
+export const inject = ['slots', 'locale']
+
+function resolveService<T = unknown>(ctx: ClientContext, name: string): T | undefined {
+  try {
+    if (typeof (ctx as unknown as { get?: (name: string) => unknown }).get === 'function') {
+      const svc = (ctx as unknown as { get: (name: string) => unknown }).get(name)
+      if (svc !== undefined) return svc as T
+    }
+  } catch {}
+  try {
+    return (ctx as unknown as Record<string, unknown>)[name] as T
+  } catch {}
+  return undefined
+}
 
 /**
  * Register the IP 池 plugin card once the `settings.plugin.item` declaration
@@ -53,7 +66,21 @@ export const inject = ['slots', 'locale', 'settingsScope']
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'OpenCode: copy dictionaries')
 
-  const scope = ctx.settingsScope.bind({ namespace: SETTINGS_NAMESPACE }) as unknown as IpPoolCardInjected['scope']
+  const configForms = resolveService<{ get(namespace: string): unknown }>(ctx, 'configForms')
+  const settingsScope = resolveService<{ bind(spec: { namespace: string }): unknown }>(ctx, 'settingsScope')
+  const scope = (
+    configForms && typeof configForms.get === 'function'
+      ? configForms.get(SETTINGS_NAMESPACE)
+      : settingsScope && typeof settingsScope.bind === 'function'
+        ? settingsScope.bind({ namespace: SETTINGS_NAMESPACE })
+        : {
+            getSnapshot: () => ({ status: 'unavailable', value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' }),
+            subscribe: () => () => {},
+            set: async () => false,
+            unset: async () => false,
+            mutate: async () => false,
+          }
+  ) as unknown as IpPoolCardInjected['scope']
   // The scope's methods are instance methods (this-bound to the controller);
   // uSES receives them as bare functions, so bind explicitly — an unbound
   // getSnapshot reads `this.store` of undefined and crashes the card.
