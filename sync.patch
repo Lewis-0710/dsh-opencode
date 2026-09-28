@@ -1,5 +1,5 @@
 diff --git a/README.md b/README.md
-index cf61160..c083dbf 100644
+index cf61160..f5ead64 100644
 --- a/README.md
 +++ b/README.md
 @@ -1,26 +1,38 @@
@@ -32,7 +32,7 @@ index cf61160..c083dbf 100644
 +> 3. **Fix Upstream Test Defect**: Fixed mock catalog missing `reasoningCapability` method from upstream PR #8, keeping all test suites passing cleanly.
 +> 4. **Upstream Sync Workflow (`sync.sh` & `sync.patch`)**: Built-in automated "Patch-First, Smart-Merge" sync script and clean patch snapshot for effortless upstream updates.
 +> 5. **DSH Desktop Deep Integration**: Fully adapted for DSH Desktop profile bundles and workspace overrides, preventing accidental unlinking during market operations.
-+> 6. **Reasoning Effort Guard Fix**: Fixed upstream defect where `reasoning_effort` was unconditionally injected regardless of model capability, causing 400 `unknown parameter reasoning_effort` errors from downstream providers (e.g., Console). Injection is now strictly guarded by declared metadata ladders.
++> 6. **Responses API Protocol Adaptation & Catalog Guard**: Fixed upstream defect where `reasoning_effort` was wrongly injected at the root level of Responses API requests (like Muse Spark series), causing 400 `unknown parameter reasoning_effort` errors from downstream providers (Console). The adapter now correctly uses the nested `reasoning: { effort }` structure and strips invalid root-level fields. Furthermore, known broken/deprecated models (such as `deepseek-v4-flash-free`, `jev-1.13-free`) are strictly filtered and guarded.
 +>
 +> See [sync.patch](./sync.patch) for details.
 +
@@ -112,7 +112,7 @@ index cf61160..c083dbf 100644
  | `agentPath` | auto-resolved | Sidecar only: path to the agent binary. |
  | `agentArgs` | — | Sidecar only: extra CLI args for the agent. |
 diff --git a/README.zh-CN.md b/README.zh-CN.md
-index cb7603f..42d905c 100644
+index cb7603f..6ba2534 100644
 --- a/README.zh-CN.md
 +++ b/README.zh-CN.md
 @@ -1,25 +1,37 @@
@@ -145,7 +145,7 @@ index cb7603f..42d905c 100644
 +> 3. **修复上游测试用例缺陷**：修复 upstream PR #8 中 mock catalog 缺失 `reasoningCapability` 导致的单元测试崩溃问题，保障测试套件稳定通过。
 +> 4. **上游同步与补丁体系（sync.sh / sync.patch）**：内置基于“Patch-First, Smart-Merge”策略的自动同步脚本与干净 patch 快照，方便一键跟随上游最新更新。
 +> 5. **DSH Desktop 运行环境深度适配**：优化桌面端 Profile 与 workspace overrides 兼容性，确保插件在桌面环境下稳定持久运行。
-+> 6. **修复推理参数盲目注入缺陷（Reasoning Effort Guard）**：修复原代码无论模型是否支持均注入 `reasoning_effort` 导致下游提供商（如 Console）返回 400 `unknown parameter reasoning_effort` 的问题。仅对明确声明了 effort 阶梯的模型暴露与注入，杜绝非法参数下发。
++> 6. **修复推理参数协议适配与失效模型过滤（Responses API & Catalog Guard）**：彻底修复 Responses 协议模型（如 Muse Spark 系列）因顶层被错误注入 `reasoning_effort` 导致下游提供商（Console）报 400 `unknown parameter reasoning_effort` 的问题，自动适配专属的 `reasoning: { effort }` 格式并清理顶层非法字段；同时对已知下架或失效的模型（如 `deepseek-v4-flash-free`、`jev-1.13-free` 等）进行严格过滤与降级保护，确保 DSH 模型列表纯净可用。
 +>
 +> 详见 [sync.patch](./sync.patch)。
 +
@@ -282,6 +282,66 @@ index 0944973..861b63b 100644
        ],
        "platform": "web"
      }
+diff --git a/packages/plugin/src/adapter/catalog.ts b/packages/plugin/src/adapter/catalog.ts
+index 610229c..240caf3 100644
+--- a/packages/plugin/src/adapter/catalog.ts
++++ b/packages/plugin/src/adapter/catalog.ts
+@@ -20,19 +20,29 @@ export const ZEN_BASE_URL = 'https://opencode.ai/zen'
+ export const staticFreeModels: string[] = [
+   'big-pickle', // verified 2026-08-28: anonymous chat 200 (non-stream + stream)
+   'mimo-v2.5-free', // verified 2026-08-28: anonymous chat 200 (non-stream)
++  'mimo-v2.6-flash-free', // verified 2026-09-28: anonymous chat 200
++  'longcat-2.5-preview-free', // verified 2026-09-28: anonymous chat 200
+   'ling-3.0-flash-fin-free', // verified 2026-09-01: anonymous chat 200
+   'nemotron-3.5-lightning-free', // verified 2026-09-01: anonymous chat 200
+   'nemotron-3-ultra-free', // verified 2026-09-01: anonymous chat 200 (7s, earlier timeout was transient)
+-  'muse-spark-1.2-contributor-free', // verified 2026-09-01: listed free in docs pricing; 403 region-blocked from our probe, region restriction accepted as non-fatal
++  'muse-spark-1.2-contributor-free', // verified 2026-09-01: 200 on /responses
++  'muse-spark-1.3-contributor-free', // verified 2026-09-28: 200 on /responses
++  'space-bunny-free', // verified 2026-09-28: 200 on /chat/completions
+ ]
+ 
+-/** Exposed by /v1/models but without a verified anonymous chat yet. */
+-export const staticFreeCandidates: string[] = [
+-  // 'deepseek-v4-flash-free',          // models.dev deprecated; 2026-09-01: upstream 400 "Model is unavailable"
+-  // 'laguna-s-2.1-free',                // models.dev deprecated; 2026-09-01: upstream 503 (intermittent, failed twice)
+-  // 'hy3-free',                        // models.dev deprecated; 2026-09-01: delisted from /v1/models, upstream 401 "not supported"
++/** Models that are confirmed to be unavailable, deprecated, or broken (returning 400/401/500 from Zen upstream). */
++export const knownUnavailableModels: readonly string[] = [
++  'deepseek-v4-flash-free', // upstream 400 "Model is unavailable"
++  'jev-1.13-free', // upstream 500 "Internal server error"
++  'mimo-v2-flash-free', // upstream 401 "Model is not supported"
++  'minimax-m2.5-free', // upstream 401 "Model is not supported"
++  'hy3-free', // upstream 401 "not supported"
++  'laguna-s-2.1-free', // upstream 503
+ ]
+ 
++/** Exposed by /v1/models but without a verified anonymous chat yet. */
++export const staticFreeCandidates: string[] = []
++
+ export function isFreeModel(model: string): boolean {
+   return model.toLowerCase().includes('free')
+ }
+@@ -62,6 +72,9 @@ interface ModelPrice {
+  * (pending or model missing) — its original documented intent (design.md 4.2).
+  */
+ export function decide(model: string, prices: Map<string, ModelPrice>, ready: boolean): AnonymousDecision {
++  if (knownUnavailableModels.includes(model)) {
++    return { allowed: false, source: 'known_unavailable', known: true }
++  }
+   const nameFree = isFreeModel(model)
+   const fallback = (source: string): AnonymousDecision => {
+     if (nameFree) return { allowed: true, source: 'name_free', known: false }
+@@ -301,6 +314,9 @@ export class ModelCatalog {
+   }
+ 
+   decision(model: string): AnonymousDecision {
++    if (knownUnavailableModels.includes(model)) {
++      return { allowed: false, source: 'known_unavailable', known: true }
++    }
+     const metadata = decide(model, this.#prices, this.#pricesReady)
+     // The S3 vouch only covers ids metadata cannot speak for. A metadata
+     // verdict of deprecated is Known, but S3 entries are compile-time verified
 diff --git a/packages/plugin/src/adapter/events.ts b/packages/plugin/src/adapter/events.ts
 index bb7e7c5..0e70909 100644
 --- a/packages/plugin/src/adapter/events.ts
@@ -360,9 +420,18 @@ index 3918515..e7d10ce 100644
    const tools = Array.isArray(body.tools) ? (body.tools as unknown[]) : []
    const names = new Set(
 diff --git a/packages/plugin/src/adapter/zen-adapter.ts b/packages/plugin/src/adapter/zen-adapter.ts
-index 342eb39..7d0f811 100644
+index 342eb39..a6c820c 100644
 --- a/packages/plugin/src/adapter/zen-adapter.ts
 +++ b/packages/plugin/src/adapter/zen-adapter.ts
+@@ -2,7 +2,7 @@ import { createProvider, type Api, type Context, type Model } from '@earendil-wo
+ import * as openaiCompletions from '@earendil-works/pi-ai/api/openai-completions'
+ import * as openaiResponses from '@earendil-works/pi-ai/api/openai-responses'
+ 
+-import { ModelCatalog, ZEN_BASE_URL } from './catalog.ts'
++import { knownUnavailableModels, ModelCatalog, ZEN_BASE_URL } from './catalog.ts'
+ import { toStreamChunks, type HarnessChunk, type PiEvent } from './events.ts'
+ import { deriveRequestIDs, disguiseHeaders } from './ids.ts'
+ import { ensureFreeLaneShape, toPiContext, type HarnessGenerateOptions } from './messages.ts'
 @@ -10,7 +10,7 @@ import { routingContext, type RoutingContext } from '../pool/dispatcher.ts'
  import { classifyStreamFailure, isRegionBlocked, shouldRotate } from '../pool/rotate.ts'
  
@@ -503,7 +572,21 @@ index 342eb39..7d0f811 100644
    }
  
    /**
-@@ -450,13 +449,13 @@ export class ZenAdapter {
+@@ -292,6 +291,13 @@ export class ZenAdapter {
+     const context = toPiContext(options)
+     const ids = deriveRequestIDs(options.messages)
+     const model = toPiModel(options.model, this.#catalog.reasoningCapability(options.model)?.reasoning === true)
++
++    if (knownUnavailableModels.includes(options.model)) {
++      const msg = `OpenCode: 模型 "${options.model}" 已被上游下架停用或服务异常，请在模型列表中切换到其他可用模型（如 big-pickle、mimo-v2.6-flash-free、muse-spark-1.3-contributor-free 等）`
++      yield* toStreamChunks((async function* () { yield terminalErrorEvent(msg, model) })(), model.contextWindow)
++      return
++    }
++
+     // IP-pool routing context (docs/ip-pool.md 3.3): pi-ai builds the request
+     // body and dispatches it on separate layers with no channel for "which
+     // model is this fetch for", so the per-request context rides AsyncLocalStorage.
+@@ -450,13 +456,13 @@ export class ZenAdapter {
            const e = buffered[i] as PiEvent & { error?: { errorMessage?: string }; message?: { errorMessage?: string; stopReason?: string } }
            if (e.type === 'error' && e.error) {
              e.error.errorMessage = rotateStory.length > 1
@@ -519,23 +602,60 @@ index 342eb39..7d0f811 100644
                : e.message.errorMessage!
              break
            }
-@@ -482,7 +481,15 @@ export class ZenAdapter {
+@@ -482,15 +488,44 @@ export class ZenAdapter {
      // seam carries the selected reasoning effort: pi-ai has no option with the
      // wire semantics this lane needs (selected off must SEND `none`, not omit),
      // so the effort rides the payload rewrite instead.
 -    const effortWire = reasoningEffortWire(options.reasoningEffort)
+-    const onPayload =
+-      effortWire === undefined
+-        ? ensureFreeLaneShape
+-        : (payload: unknown): unknown => {
+-            const shaped = ensureFreeLaneShape(payload)
+-            if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return shaped
+-            return { ...((shaped ?? payload) as Record<string, unknown>), reasoning_effort: effortWire }
+-          }
 +    //
 +    // Guard against injecting `reasoning_effort` into models/providers that do not
 +    // support it (e.g. models with no declared effort ladder or non-reasoning models;
 +    // upstream provider "Console" returns 400 "unknown parameter `reasoning_effort`").
++    const isResponses = isResponsesModel(model.id)
 +    const validEfforts = reasoningEfforts(this.#catalog.reasoningCapability(model.id))
 +    const effortWire =
 +      validEfforts && options.reasoningEffort && validEfforts.some((e) => e.id === options.reasoningEffort)
 +        ? reasoningEffortWire(options.reasoningEffort)
 +        : undefined
-     const onPayload =
-       effortWire === undefined
-         ? ensureFreeLaneShape
++
++    const onPayload = (payload: unknown): unknown => {
++      const shaped = ensureFreeLaneShape(payload)
++      if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return shaped
++      const base = { ...((shaped ?? payload) as Record<string, unknown>) }
++
++      if (isResponses) {
++        // Responses API (muse-spark-*): OpenAI Responses API specification uses
++        // `reasoning: { effort: string }` instead of top-level `reasoning_effort`.
++        // Upstream provider "Console" strictly validates Responses schema and returns
++        // 400 "unknown parameter `reasoning_effort`" if `reasoning_effort` is present at top-level.
++        delete base.reasoning_effort
++        if (effortWire !== undefined) {
++          base.reasoning = { effort: effortWire }
++        }
++        if (shaped === undefined && effortWire === undefined && !('reasoning_effort' in (payload as Record<string, unknown>))) {
++          return undefined
++        }
++        return base
++      }
++
++      // Chat Completions API: top-level reasoning_effort
++      if (effortWire !== undefined) {
++        base.reasoning_effort = effortWire
++        return base
++      }
++      return shaped
++    }
+     // Responses-only models (muse-spark-*) must hit /responses, not /chat/completions.
+     const provider = isResponsesModel(model.id) && this.#responsesProvider
+       ? this.#responsesProvider
 diff --git a/packages/plugin/src/client/IpPoolCard.tsx b/packages/plugin/src/client/IpPoolCard.tsx
 index 7ce7eca..605b712 100644
 --- a/packages/plugin/src/client/IpPoolCard.tsx
@@ -1231,7 +1351,7 @@ index 5ad37b2..8267ea9 100644
      usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 },
    },
 diff --git a/packages/plugin/test/zen-adapter.test.ts b/packages/plugin/test/zen-adapter.test.ts
-index 08956e0..6eb6934 100644
+index 08956e0..59eccd2 100644
 --- a/packages/plugin/test/zen-adapter.test.ts
 +++ b/packages/plugin/test/zen-adapter.test.ts
 @@ -1,7 +1,7 @@
@@ -1340,7 +1460,7 @@ index 08956e0..6eb6934 100644
  })
  
  /** Scripted provider that records the streamSimple options it receives. */
-@@ -126,40 +128,52 @@ const gateBody = {
+@@ -126,40 +128,75 @@ const gateBody = {
    tools: ['bash', 'read'].map((name) => ({ type: 'function', function: { name, description: 'd', parameters: {} } })),
  }
  
@@ -1349,11 +1469,13 @@ index 08956e0..6eb6934 100644
 +  catalogReasoning: boolean,
 +  effort?: string,
 +  effortValues: string[] = ['off', 'low', 'high'],
++  modelName = 'big-pickle',
 +): Promise<Array<{ onPayload?: (payload: unknown) => unknown }>> {
    const { provider, captured } = capturingProvider()
    const adapter = new ZenAdapter(
      {
-       list: () => ['big-pickle'],
+-      list: () => ['big-pickle'],
++      list: () => [modelName],
        decision: () => ({ allowed: true, source: 'test', known: true }),
 -      reasoningCapability: () => ({ reasoning: catalogReasoning, effortValues: [] }),
 +      reasoningCapability: () => ({ reasoning: catalogReasoning, effortValues }),
@@ -1361,7 +1483,7 @@ index 08956e0..6eb6934 100644
      { providerOverride: provider },
    )
 -  const options = { provider: 'opencode2dsh', model: 'big-pickle', messages: [], temperature: 0, maxTokens: 16 }
-+  const options = { provider: 'OpenCode', model: 'big-pickle', messages: [], temperature: 0, maxTokens: 16 }
++  const options = { provider: 'OpenCode', model: modelName, messages: [], temperature: 0, maxTokens: 16 }
    const stream = adapter.stream({ ...options, ...(effort !== undefined ? { reasoningEffort: effort } : {}) } as never)
    for await (const chunk of stream) void chunk
    return captured
@@ -1392,6 +1514,28 @@ index 08956e0..6eb6934 100644
 +  // reasoning model without declared ladder: NEVER injects reasoning_effort
 +  const emptyEffortOptions = (await runStream(true, 'low', []))[0]!
 +  assert.equal(emptyEffortOptions.onPayload?.({ ...gateBody }), undefined)
++})
++
++test('stream adapts reasoning parameter to reasoning: { effort } for responses models', async () => {
++  const options = (await runStream(true, 'low', ['low', 'high'], 'muse-spark-1.3-contributor-free'))[0]!
++  const shaped = options.onPayload?.({ model: 'muse-spark-1.3-contributor-free', input: [], stream: true, reasoning_effort: 'low' }) as Record<string, unknown>
++  assert.equal(shaped.reasoning_effort, undefined, 'top-level reasoning_effort must be removed')
++  assert.deepEqual(shaped.reasoning, { effort: 'low' }, 'responses API schema uses reasoning: { effort }')
++})
++
++test('stream immediately rejects known unavailable models with friendly message', async () => {
++  const adapter = new ZenAdapter({
++    list: () => ['deepseek-v4-flash-free'],
++    decision: () => ({ allowed: false, source: 'known_unavailable', known: true }),
++    reasoningCapability: () => undefined,
++  })
++  const chunks: unknown[] = []
++  for await (const chunk of adapter.stream({ provider: 'OpenCode', model: 'deepseek-v4-flash-free', messages: [] } as never)) {
++    chunks.push(chunk)
++  }
++  const finish = chunks.find((c: any) => c.type === 'finish') as any
++  assert.equal(finish?.reason?.kind, 'error')
++  assert.ok(finish?.reason?.failure?.message?.includes('已被上游下架停用'))
  })
  
  test('stream keeps the free-lane gate rewrite alongside the effort injection', async () => {
@@ -1401,7 +1545,7 @@ index 08956e0..6eb6934 100644
    const shaped = offOptions.onPayload?.({ model: 'big-pickle', messages: [], stream: true }) as Record<string, unknown>
    assert.equal(shaped.reasoning_effort, 'none')
    assert.deepEqual(
-@@ -175,9 +189,11 @@ test('stream keeps the free-lane gate rewrite alongside the effort injection', a
+@@ -175,9 +212,11 @@ test('stream keeps the free-lane gate rewrite alongside the effort injection', a
  test('isResponsesModel routes muse-spark to responses, everything else to chat', () => {
    for (const id of ['muse-spark-1.3-contributor-free', 'muse-spark-1.2-contributor-free', 'muse-spark-1.2', 'MUSE-SPARK-1.3']) {
      assert.equal(isResponsesModel(id), true, id)
@@ -1413,7 +1557,7 @@ index 08956e0..6eb6934 100644
    }
  })
  
-@@ -196,12 +212,12 @@ test('responses models use the wider body-idle window, injectable for tests', as
+@@ -196,12 +235,12 @@ test('responses models use the wider body-idle window, injectable for tests', as
    }
    const measure = async (model: string) => {
      const adapter = new ZenAdapter(
@@ -1428,7 +1572,7 @@ index 08956e0..6eb6934 100644
        if (chunk.type === 'finish') {
          reason = chunk.reason as { kind: string }
          break
-@@ -216,3 +232,4 @@ test('responses models use the wider body-idle window, injectable for tests', as
+@@ -216,3 +255,4 @@ test('responses models use the wider body-idle window, injectable for tests', as
    assert.equal(responses.reason?.kind, 'error')
    assert.ok(responses.elapsed > 350, `responses should honor the injected 400ms window, took ${responses.elapsed}ms`)
  })
