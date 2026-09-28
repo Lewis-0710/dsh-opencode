@@ -283,7 +283,7 @@ index 0944973..861b63b 100644
        "platform": "web"
      }
 diff --git a/packages/plugin/src/adapter/catalog.ts b/packages/plugin/src/adapter/catalog.ts
-index 610229c..240caf3 100644
+index 610229c..c44da66 100644
 --- a/packages/plugin/src/adapter/catalog.ts
 +++ b/packages/plugin/src/adapter/catalog.ts
 @@ -20,19 +20,29 @@ export const ZEN_BASE_URL = 'https://opencode.ai/zen'
@@ -342,6 +342,18 @@ index 610229c..240caf3 100644
      const metadata = decide(model, this.#prices, this.#pricesReady)
      // The S3 vouch only covers ids metadata cannot speak for. A metadata
      // verdict of deprecated is Known, but S3 entries are compile-time verified
+@@ -334,7 +350,10 @@ export class ModelCatalog {
+    */
+   reasoningCapability(model: string): { reasoning: boolean; effortValues: string[] } | undefined {
+     const price = this.#prices.get(model)
+-    if (!price) return undefined
++    if (!price) {
++      if (staticFreeModels.includes(model)) return { reasoning: true, effortValues: [] }
++      return undefined
++    }
+     return { reasoning: price.reasoning === true, effortValues: price.effortValues ?? [] }
+   }
+ 
 diff --git a/packages/plugin/src/adapter/events.ts b/packages/plugin/src/adapter/events.ts
 index bb7e7c5..0e70909 100644
 --- a/packages/plugin/src/adapter/events.ts
@@ -420,7 +432,7 @@ index 3918515..e7d10ce 100644
    const tools = Array.isArray(body.tools) ? (body.tools as unknown[]) : []
    const names = new Set(
 diff --git a/packages/plugin/src/adapter/zen-adapter.ts b/packages/plugin/src/adapter/zen-adapter.ts
-index 342eb39..a6c820c 100644
+index 342eb39..a2b5988 100644
 --- a/packages/plugin/src/adapter/zen-adapter.ts
 +++ b/packages/plugin/src/adapter/zen-adapter.ts
 @@ -2,7 +2,7 @@ import { createProvider, type Api, type Context, type Model } from '@earendil-wo
@@ -451,26 +463,24 @@ index 342eb39..a6c820c 100644
  
  export interface ZenModelInfo {
    id: string
-@@ -48,9 +49,6 @@ const DEFAULT_MAX_TOKENS = 32768
-  */
+@@ -49,7 +50,7 @@ const DEFAULT_MAX_TOKENS = 32768
  export const REASONING_EFFORT_LADDER = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
  
--/** Levels offered for reasoning models whose metadata declares no ladder. */
+ /** Levels offered for reasoning models whose metadata declares no ladder. */
 -const DEFAULT_EFFORT_LADDER: readonly string[] = ['off', 'minimal', 'low', 'medium', 'high']
--
++export const DEFAULT_EFFORT_LADDER: readonly string[] = ['off', 'minimal', 'low', 'medium', 'high']
+ 
  /** Selectable reasoning effort as dsh-llm's resolveModel contract describes it. */
  export interface ZenReasoningEffort {
-   id: string
-@@ -62,24 +60,23 @@ export interface ZenReasoningEffort {
+@@ -62,14 +63,13 @@ export interface ZenReasoningEffort {
   * Turn the catalog's models.dev capability into the advertised effort list.
   * A declared ladder (models.dev `reasoning_options` effort values) wins — its
   * values are the upstream-honored spellings, with metadata `none` folded into
 - * our `off`. Without a declaration, a reasoning model gets the standard
 - * ladder the Zen gateway accepts for every model. Non-reasoning models
 - * advertise nothing (the picker then offers only the provider default).
-+ * our `off`. Models without a declared effort ladder (or non-reasoning models)
-+ * advertise nothing to avoid exposing unsupported controls or injecting
-+ * unknown `reasoning_effort` parameters to downstream providers (like Console).
++ * our `off`. Models declaring no specific ladder default to standard levels
++ * (Off/Minimal/Low/Medium/High) so DSH model selector allows full control.
   */
  export function reasoningEfforts(capability: { reasoning: boolean; effortValues: string[] } | undefined): ZenReasoningEffort[] | undefined {
    if (!capability?.reasoning) return undefined
@@ -480,23 +490,7 @@ index 342eb39..a6c820c 100644
      const level = value === 'none' ? 'off' : value
      if ((REASONING_EFFORT_LADDER as readonly string[]).includes(level) && !declared.includes(level)) declared.push(level)
    }
--  const levels = declared.length > 0
--    ? declared.sort(
--        (a, b) =>
--          (REASONING_EFFORT_LADDER as readonly string[]).indexOf(a) -
--          (REASONING_EFFORT_LADDER as readonly string[]).indexOf(b),
--      )
--    : DEFAULT_EFFORT_LADDER
-+  if (declared.length === 0) return undefined
-+  const levels = declared.sort(
-+    (a, b) =>
-+      (REASONING_EFFORT_LADDER as readonly string[]).indexOf(a) -
-+      (REASONING_EFFORT_LADDER as readonly string[]).indexOf(b),
-+  )
-   return levels.map((level) => ({ id: level, name: `${level.charAt(0).toUpperCase()}${level.slice(1)}` }))
- }
- 
-@@ -108,8 +105,8 @@ const ANONYMOUS_KEY = 'public'
+@@ -108,8 +108,8 @@ const ANONYMOUS_KEY = 'public'
   * carry "timeout" so classifyStreamFailure maps them to 'transport' and
   * the rotate loop gets to move the session to a live exit.
   */
@@ -507,7 +501,7 @@ index 342eb39..a6c820c 100644
  
  /** Default watchdog windows (docs/ip-pool.md; test-injectable via constructor). */
  export const DEFAULT_FIRST_EVENT_MS = 30_000
-@@ -123,6 +120,18 @@ export const DEFAULT_BODY_IDLE_MS = 120_000
+@@ -123,6 +123,18 @@ export const DEFAULT_BODY_IDLE_MS = 120_000
   */
  export const RESPONSES_BODY_IDLE_MS = 300_000
  
@@ -526,7 +520,7 @@ index 342eb39..a6c820c 100644
  /** The terminal error event pi-ai owes but never sent (watchdog teardown). */
  function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
    return {
-@@ -139,17 +148,7 @@ function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
+@@ -139,17 +151,7 @@ function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
    }
  }
  
@@ -545,7 +539,7 @@ index 342eb39..a6c820c 100644
    const isResponses = isResponsesModel(id)
    return {
      id,
-@@ -204,7 +203,7 @@ export class ZenAdapter {
+@@ -204,7 +206,7 @@ export class ZenAdapter {
      }
      this.#provider = createProvider<Api>({
        id: PROVIDER_ID,
@@ -554,7 +548,7 @@ index 342eb39..a6c820c 100644
        baseUrl,
        auth,
        models: [],
-@@ -212,7 +211,7 @@ export class ZenAdapter {
+@@ -212,7 +214,7 @@ export class ZenAdapter {
      })
      this.#responsesProvider = createProvider<Api>({
        id: PROVIDER_ID,
@@ -563,7 +557,7 @@ index 342eb39..a6c820c 100644
        baseUrl,
        auth,
        models: [],
-@@ -221,7 +220,7 @@ export class ZenAdapter {
+@@ -221,7 +223,7 @@ export class ZenAdapter {
    }
  
    providerInfo(provider: string): { id: string; name: string } {
@@ -572,7 +566,7 @@ index 342eb39..a6c820c 100644
    }
  
    /**
-@@ -292,6 +291,13 @@ export class ZenAdapter {
+@@ -292,6 +294,13 @@ export class ZenAdapter {
      const context = toPiContext(options)
      const ids = deriveRequestIDs(options.messages)
      const model = toPiModel(options.model, this.#catalog.reasoningCapability(options.model)?.reasoning === true)
@@ -586,7 +580,7 @@ index 342eb39..a6c820c 100644
      // IP-pool routing context (docs/ip-pool.md 3.3): pi-ai builds the request
      // body and dispatches it on separate layers with no channel for "which
      // model is this fetch for", so the per-request context rides AsyncLocalStorage.
-@@ -450,13 +456,13 @@ export class ZenAdapter {
+@@ -450,13 +459,13 @@ export class ZenAdapter {
            const e = buffered[i] as PiEvent & { error?: { errorMessage?: string }; message?: { errorMessage?: string; stopReason?: string } }
            if (e.type === 'error' && e.error) {
              e.error.errorMessage = rotateStory.length > 1
@@ -602,7 +596,7 @@ index 342eb39..a6c820c 100644
                : e.message.errorMessage!
              break
            }
-@@ -482,15 +488,44 @@ export class ZenAdapter {
+@@ -482,15 +491,44 @@ export class ZenAdapter {
      // seam carries the selected reasoning effort: pi-ai has no option with the
      // wire semantics this lane needs (selected off must SEND `none`, not omit),
      // so the effort rides the payload rewrite instead.
@@ -1351,7 +1345,7 @@ index 5ad37b2..8267ea9 100644
      usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 },
    },
 diff --git a/packages/plugin/test/zen-adapter.test.ts b/packages/plugin/test/zen-adapter.test.ts
-index 08956e0..59eccd2 100644
+index 08956e0..dd5ad03 100644
 --- a/packages/plugin/test/zen-adapter.test.ts
 +++ b/packages/plugin/test/zen-adapter.test.ts
 @@ -1,7 +1,7 @@
@@ -1396,7 +1390,7 @@ index 08956e0..59eccd2 100644
    assert.equal(call.model.id, 'big-pickle')
    assert.equal(typeof call.stream, 'function')
  })
-@@ -48,19 +48,16 @@ test('listModels mirrors the catalog without duplicates', () => {
+@@ -48,7 +48,7 @@ test('listModels mirrors the catalog without duplicates', () => {
      decision: () => ({ allowed: true, source: 'test', known: true }),
      reasoningCapability: () => ({ reasoning: true, effortValues: [] }),
    })
@@ -1405,36 +1399,12 @@ index 08956e0..59eccd2 100644
    assert.deepEqual(models.map((m) => m.id), ['big-pickle', 'mimo-v2.5-free'])
  })
  
--test('reasoningEfforts: declared ladder wins, none folds into off, default ladder otherwise', () => {
-+test('reasoningEfforts: declared ladder wins, none folds into off, empty ladder advertises nothing', () => {
-   // no capability / non-reasoning model: advertise nothing
-   assert.equal(reasoningEfforts(undefined), undefined)
-   assert.equal(reasoningEfforts({ reasoning: false, effortValues: ['low'] }), undefined)
--  // reasoning without a declared ladder: the standard five the gateway accepts
--  assert.deepEqual(
--    reasoningEfforts({ reasoning: true, effortValues: [] })?.map((e) => e.id),
--    ['off', 'minimal', 'low', 'medium', 'high'],
--  )
-+  // reasoning without a declared ladder: advertise nothing (avoids 400 from downstream providers like Console)
-+  assert.equal(reasoningEfforts({ reasoning: true, effortValues: [] }), undefined)
-   // declared ladder (muse-spark shape) is offered verbatim, ladder-ordered
-   assert.deepEqual(
-     reasoningEfforts({ reasoning: true, effortValues: ['xhigh', 'low', 'medium'] })?.map((e) => e.id),
-@@ -72,7 +69,7 @@ test('reasoningEfforts: declared ladder wins, none folds into off, default ladde
-     ['off', 'high'],
-   )
-   // selector labels are the capitalized level names
--  assert.deepEqual(reasoningEfforts({ reasoning: true, effortValues: [] })?.[0], { id: 'off', name: 'Off' })
-+  assert.deepEqual(reasoningEfforts({ reasoning: true, effortValues: ['none', 'high'] })?.[0], { id: 'off', name: 'Off' })
- })
- 
- test('reasoningEffortWire maps picker ids to the gateway spelling', () => {
-@@ -87,19 +84,24 @@ test('reasoningEffortWire maps picker ids to the gateway spelling', () => {
+@@ -87,19 +87,27 @@ test('reasoningEffortWire maps picker ids to the gateway spelling', () => {
    assert.equal(reasoningEffortWire('banana'), undefined)
  })
  
 -test('resolveModel advertises the thinking-level picker for reasoning models only', () => {
-+test('resolveModel advertises the thinking-level picker for reasoning models with declared ladder only', () => {
++test('resolveModel advertises the thinking-level picker for reasoning models', () => {
    const adapter = new ZenAdapter({
 -    list: () => ['big-pickle', 'ghost'],
 +    list: () => ['big-pickle', 'plain-reasoning', 'ghost'],
@@ -1452,15 +1422,18 @@ index 08956e0..59eccd2 100644
 +    adapter.resolveModel('OpenCode', 'big-pickle').reasoning?.efforts.map((e) => e.id),
      ['low', 'high'],
    )
-+  // reasoning model without declared ladder: no reasoning picker advertised
-+  assert.equal(adapter.resolveModel('OpenCode', 'plain-reasoning').reasoning, undefined)
++  // reasoning model without declared ladder gets the standard five the gateway accepts
++  assert.deepEqual(
++    adapter.resolveModel('OpenCode', 'plain-reasoning').reasoning?.efforts.map((e) => e.id),
++    ['off', 'minimal', 'low', 'medium', 'high'],
++  )
    // unknown metadata: no reasoning field — dsh-llm then offers only the default
 -  assert.equal(adapter.resolveModel('opencode2dsh', 'ghost').reasoning, undefined)
 +  assert.equal(adapter.resolveModel('OpenCode', 'ghost').reasoning, undefined)
  })
  
  /** Scripted provider that records the streamSimple options it receives. */
-@@ -126,40 +128,75 @@ const gateBody = {
+@@ -126,40 +134,75 @@ const gateBody = {
    tools: ['bash', 'read'].map((name) => ({ type: 'function', function: { name, description: 'd', parameters: {} } })),
  }
  
@@ -1511,9 +1484,9 @@ index 08956e0..59eccd2 100644
 +  const nonReasoningOptions = (await runStream(false, 'low'))[0]!
 +  assert.equal(nonReasoningOptions.onPayload?.({ ...gateBody }), undefined)
 +
-+  // reasoning model without declared ladder: NEVER injects reasoning_effort
++  // reasoning model without declared ladder: uses default ladder and injects reasoning_effort
 +  const emptyEffortOptions = (await runStream(true, 'low', []))[0]!
-+  assert.equal(emptyEffortOptions.onPayload?.({ ...gateBody }), undefined)
++  assert.deepEqual(emptyEffortOptions.onPayload?.({ ...gateBody }), { ...gateBody, reasoning_effort: 'low' })
 +})
 +
 +test('stream adapts reasoning parameter to reasoning: { effort } for responses models', async () => {
@@ -1545,7 +1518,7 @@ index 08956e0..59eccd2 100644
    const shaped = offOptions.onPayload?.({ model: 'big-pickle', messages: [], stream: true }) as Record<string, unknown>
    assert.equal(shaped.reasoning_effort, 'none')
    assert.deepEqual(
-@@ -175,9 +212,11 @@ test('stream keeps the free-lane gate rewrite alongside the effort injection', a
+@@ -175,9 +218,11 @@ test('stream keeps the free-lane gate rewrite alongside the effort injection', a
  test('isResponsesModel routes muse-spark to responses, everything else to chat', () => {
    for (const id of ['muse-spark-1.3-contributor-free', 'muse-spark-1.2-contributor-free', 'muse-spark-1.2', 'MUSE-SPARK-1.3']) {
      assert.equal(isResponsesModel(id), true, id)
@@ -1557,7 +1530,7 @@ index 08956e0..59eccd2 100644
    }
  })
  
-@@ -196,12 +235,12 @@ test('responses models use the wider body-idle window, injectable for tests', as
+@@ -196,12 +241,12 @@ test('responses models use the wider body-idle window, injectable for tests', as
    }
    const measure = async (model: string) => {
      const adapter = new ZenAdapter(
@@ -1572,7 +1545,7 @@ index 08956e0..59eccd2 100644
        if (chunk.type === 'finish') {
          reason = chunk.reason as { kind: string }
          break
-@@ -216,3 +255,4 @@ test('responses models use the wider body-idle window, injectable for tests', as
+@@ -216,3 +261,4 @@ test('responses models use the wider body-idle window, injectable for tests', as
    assert.equal(responses.reason?.kind, 'error')
    assert.ok(responses.elapsed > 350, `responses should honor the injected 400ms window, took ${responses.elapsed}ms`)
  })
