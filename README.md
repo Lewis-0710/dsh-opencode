@@ -23,6 +23,7 @@ English | [简体中文](README.zh-CN.md)
 > 3. **Fix Upstream Test Defect**: Fixed mock catalog missing `reasoningCapability` method from upstream PR #8, keeping all test suites passing cleanly.
 > 4. **Upstream Sync Workflow (`sync.sh` & `sync.patch`)**: Built-in automated "Patch-First, Smart-Merge" sync script and clean patch snapshot for effortless upstream updates.
 > 5. **DSH Desktop Deep Integration**: Fully adapted for DSH Desktop profile bundles and workspace overrides, preventing accidental unlinking during market operations.
+> 6. **Reasoning Effort Guard Fix**: Fixed upstream defect where `reasoning_effort` was unconditionally injected regardless of model capability, causing 400 `unknown parameter reasoning_effort` errors from downstream providers (e.g., Console). Injection is now strictly guarded by declared metadata ladders.
 >
 > See [sync.patch](./sync.patch) for details.
 
@@ -43,7 +44,7 @@ nothing to host.
 - **Zero credential, zero setup** — the anonymous lane needs no key; install, restart, chat
 - **Native adapter, no sidecar** — one npm package, no child process, no binary, no local port (the legacy Go sidecar is not part of the published package; see `legacy/`)
 - **CLI-identical disguise** — requests carry the OpenCode CLI user agent and its session/request/project header set, derived per conversation
-- **Selectable thinking levels** — reasoning-capable free models expose an effort picker in DSH's model selector (declared ladders where the model metadata provides them, Off/Minimal/Low/Medium/High otherwise); Off sends `reasoning_effort: "none"` upstream to actually stop thinking, and no selection keeps the provider default
+- **Precise thinking level control** — reasoning-capable free models expose an effort picker in DSH's model selector strictly according to declared ladders; models without declared ladders or non-reasoning models omit the parameter entirely, preventing 400 errors from downstream gateways; Off sends `reasoning_effort: "none"` upstream to actually stop thinking, and no selection keeps the provider default
 - **Live catalog with a fallback chain** — live upstream list ∩ free-by-metadata, falling back to offline cache and a verified static list
 - **Self-healing** — fast startup retries, periodic refresh, and a written health snapshot for diagnostics
 - **Proper error surfaces** — upstream failures (rate limit, auth, timeout, transport) arrive in DSH as classified finish reasons, and retries stay owned by DSH

@@ -49,9 +49,6 @@ const DEFAULT_MAX_TOKENS = 32768
  */
 export const REASONING_EFFORT_LADDER = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 
-/** Levels offered for reasoning models whose metadata declares no ladder. */
-const DEFAULT_EFFORT_LADDER: readonly string[] = ['off', 'minimal', 'low', 'medium', 'high']
-
 /** Selectable reasoning effort as dsh-llm's resolveModel contract describes it. */
 export interface ZenReasoningEffort {
   id: string
@@ -63,24 +60,23 @@ export interface ZenReasoningEffort {
  * Turn the catalog's models.dev capability into the advertised effort list.
  * A declared ladder (models.dev `reasoning_options` effort values) wins — its
  * values are the upstream-honored spellings, with metadata `none` folded into
- * our `off`. Without a declaration, a reasoning model gets the standard
- * ladder the Zen gateway accepts for every model. Non-reasoning models
- * advertise nothing (the picker then offers only the provider default).
+ * our `off`. Models without a declared effort ladder (or non-reasoning models)
+ * advertise nothing to avoid exposing unsupported controls or injecting
+ * unknown `reasoning_effort` parameters to downstream providers (like Console).
  */
 export function reasoningEfforts(capability: { reasoning: boolean; effortValues: string[] } | undefined): ZenReasoningEffort[] | undefined {
   if (!capability?.reasoning) return undefined
   const declared: string[] = []
-  for (const value of capability.effortValues) {
+  for (const value of capability.effortValues ?? []) {
     const level = value === 'none' ? 'off' : value
     if ((REASONING_EFFORT_LADDER as readonly string[]).includes(level) && !declared.includes(level)) declared.push(level)
   }
-  const levels = declared.length > 0
-    ? declared.sort(
-        (a, b) =>
-          (REASONING_EFFORT_LADDER as readonly string[]).indexOf(a) -
-          (REASONING_EFFORT_LADDER as readonly string[]).indexOf(b),
-      )
-    : DEFAULT_EFFORT_LADDER
+  if (declared.length === 0) return undefined
+  const levels = declared.sort(
+    (a, b) =>
+      (REASONING_EFFORT_LADDER as readonly string[]).indexOf(a) -
+      (REASONING_EFFORT_LADDER as readonly string[]).indexOf(b),
+  )
   return levels.map((level) => ({ id: level, name: `${level.charAt(0).toUpperCase()}${level.slice(1)}` }))
 }
 
@@ -485,7 +481,15 @@ export class ZenAdapter {
     // seam carries the selected reasoning effort: pi-ai has no option with the
     // wire semantics this lane needs (selected off must SEND `none`, not omit),
     // so the effort rides the payload rewrite instead.
-    const effortWire = reasoningEffortWire(options.reasoningEffort)
+    //
+    // Guard against injecting `reasoning_effort` into models/providers that do not
+    // support it (e.g. models with no declared effort ladder or non-reasoning models;
+    // upstream provider "Console" returns 400 "unknown parameter `reasoning_effort`").
+    const validEfforts = reasoningEfforts(this.#catalog.reasoningCapability(model.id))
+    const effortWire =
+      validEfforts && options.reasoningEffort && validEfforts.some((e) => e.id === options.reasoningEffort)
+        ? reasoningEffortWire(options.reasoningEffort)
+        : undefined
     const onPayload =
       effortWire === undefined
         ? ensureFreeLaneShape

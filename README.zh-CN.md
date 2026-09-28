@@ -23,6 +23,7 @@
 > 3. **修复上游测试用例缺陷**：修复 upstream PR #8 中 mock catalog 缺失 `reasoningCapability` 导致的单元测试崩溃问题，保障测试套件稳定通过。
 > 4. **上游同步与补丁体系（sync.sh / sync.patch）**：内置基于“Patch-First, Smart-Merge”策略的自动同步脚本与干净 patch 快照，方便一键跟随上游最新更新。
 > 5. **DSH Desktop 运行环境深度适配**：优化桌面端 Profile 与 workspace overrides 兼容性，确保插件在桌面环境下稳定持久运行。
+> 6. **修复推理参数盲目注入缺陷（Reasoning Effort Guard）**：修复原代码无论模型是否支持均注入 `reasoning_effort` 导致下游提供商（如 Console）返回 400 `unknown parameter reasoning_effort` 的问题。仅对明确声明了 effort 阶梯的模型暴露与注入，杜绝非法参数下发。
 >
 > 详见 [sync.patch](./sync.patch)。
 
@@ -40,9 +41,9 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
 ## 特性
 
 - **零凭据、零配置**——匿名通道不需要任何 Key；装好、重启、开聊
-- **原生 adapter，无 sidecar**——一个 npm 包，没有子进程、没有二进制、没有本地端口（旧版 Go sidecar 不随包发行，见 `legacy/`）
+- **原生 adapter，无 sidecar**——一个 npm包，没有子进程、没有二进制、没有本地端口（旧版 Go sidecar 不随包发行，见 `legacy/`）
 - **CLI 同形伪装**——请求携带 OpenCode CLI 的 User-Agent 和整套会话/请求/项目关联头，按会话派生
-- **思考等级可选**——带推理的免费模型在 DSH 模型选择器里出现思考等级选项（模型声明档位的按声明展示，其余提供 Off/Minimal/Low/Medium/High）；Off 向上游发送 `reasoning_effort: "none"` 真正停思考，不选则保持上游默认
+- **思考等级精准控制**——支持思维链调节的免费模型在 DSH 模型选择器里按声明展示等级选项；未声明阶梯或非推理模型不注入该参数，避免下游网关报 400 错误；Off 向上游发送 `reasoning_effort: "none"` 真正停思考，不选则保持上游默认
 - **实时目录 + 三级回退**——上游实时列表 ∩ 元数据判定免费，断网时依次回退到磁盘缓存与已验证的静态名单
 - **自愈能力**——启动期快速重试、周期刷新，并落盘健康快照便于排查
 - **规范的错误呈现**——上游故障（限流、鉴权、超时、传输）以分类的 finish 原因送达 DSH，重试策略始终由 DSH 掌控
