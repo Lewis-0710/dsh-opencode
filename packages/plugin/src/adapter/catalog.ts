@@ -20,18 +20,28 @@ export const ZEN_BASE_URL = 'https://opencode.ai/zen'
 export const staticFreeModels: string[] = [
   'big-pickle', // verified 2026-08-28: anonymous chat 200 (non-stream + stream)
   'mimo-v2.5-free', // verified 2026-08-28: anonymous chat 200 (non-stream)
+  'mimo-v2.6-flash-free', // verified 2026-09-28: anonymous chat 200
+  'longcat-2.5-preview-free', // verified 2026-09-28: anonymous chat 200
   'ling-3.0-flash-fin-free', // verified 2026-09-01: anonymous chat 200
   'nemotron-3.5-lightning-free', // verified 2026-09-01: anonymous chat 200
   'nemotron-3-ultra-free', // verified 2026-09-01: anonymous chat 200 (7s, earlier timeout was transient)
-  'muse-spark-1.2-contributor-free', // verified 2026-09-01: listed free in docs pricing; 403 region-blocked from our probe, region restriction accepted as non-fatal
+  'muse-spark-1.2-contributor-free', // verified 2026-09-01: 200 on /responses
+  'muse-spark-1.3-contributor-free', // verified 2026-09-28: 200 on /responses
+  'space-bunny-free', // verified 2026-09-28: 200 on /chat/completions
+]
+
+/** Models that are confirmed to be unavailable, deprecated, or broken (returning 400/401/500 from Zen upstream). */
+export const knownUnavailableModels: readonly string[] = [
+  'deepseek-v4-flash-free', // upstream 400 "Model is unavailable"
+  'jev-1.13-free', // upstream 500 "Internal server error"
+  'mimo-v2-flash-free', // upstream 401 "Model is not supported"
+  'minimax-m2.5-free', // upstream 401 "Model is not supported"
+  'hy3-free', // upstream 401 "not supported"
+  'laguna-s-2.1-free', // upstream 503
 ]
 
 /** Exposed by /v1/models but without a verified anonymous chat yet. */
-export const staticFreeCandidates: string[] = [
-  // 'deepseek-v4-flash-free',          // models.dev deprecated; 2026-09-01: upstream 400 "Model is unavailable"
-  // 'laguna-s-2.1-free',                // models.dev deprecated; 2026-09-01: upstream 503 (intermittent, failed twice)
-  // 'hy3-free',                        // models.dev deprecated; 2026-09-01: delisted from /v1/models, upstream 401 "not supported"
-]
+export const staticFreeCandidates: string[] = []
 
 export function isFreeModel(model: string): boolean {
   return model.toLowerCase().includes('free')
@@ -62,6 +72,9 @@ interface ModelPrice {
  * (pending or model missing) — its original documented intent (design.md 4.2).
  */
 export function decide(model: string, prices: Map<string, ModelPrice>, ready: boolean): AnonymousDecision {
+  if (knownUnavailableModels.includes(model)) {
+    return { allowed: false, source: 'known_unavailable', known: true }
+  }
   const nameFree = isFreeModel(model)
   const fallback = (source: string): AnonymousDecision => {
     if (nameFree) return { allowed: true, source: 'name_free', known: false }
@@ -301,6 +314,9 @@ export class ModelCatalog {
   }
 
   decision(model: string): AnonymousDecision {
+    if (knownUnavailableModels.includes(model)) {
+      return { allowed: false, source: 'known_unavailable', known: true }
+    }
     const metadata = decide(model, this.#prices, this.#pricesReady)
     // The S3 vouch only covers ids metadata cannot speak for. A metadata
     // verdict of deprecated is Known, but S3 entries are compile-time verified

@@ -132,17 +132,18 @@ async function runStream(
   catalogReasoning: boolean,
   effort?: string,
   effortValues: string[] = ['off', 'low', 'high'],
+  modelName = 'big-pickle',
 ): Promise<Array<{ onPayload?: (payload: unknown) => unknown }>> {
   const { provider, captured } = capturingProvider()
   const adapter = new ZenAdapter(
     {
-      list: () => ['big-pickle'],
+      list: () => [modelName],
       decision: () => ({ allowed: true, source: 'test', known: true }),
       reasoningCapability: () => ({ reasoning: catalogReasoning, effortValues }),
     },
     { providerOverride: provider },
   )
-  const options = { provider: 'OpenCode', model: 'big-pickle', messages: [], temperature: 0, maxTokens: 16 }
+  const options = { provider: 'OpenCode', model: modelName, messages: [], temperature: 0, maxTokens: 16 }
   const stream = adapter.stream({ ...options, ...(effort !== undefined ? { reasoningEffort: effort } : {}) } as never)
   for await (const chunk of stream) void chunk
   return captured
@@ -169,6 +170,28 @@ test('stream injects the selected reasoning_effort into the outgoing body for su
   // reasoning model without declared ladder: NEVER injects reasoning_effort
   const emptyEffortOptions = (await runStream(true, 'low', []))[0]!
   assert.equal(emptyEffortOptions.onPayload?.({ ...gateBody }), undefined)
+})
+
+test('stream adapts reasoning parameter to reasoning: { effort } for responses models', async () => {
+  const options = (await runStream(true, 'low', ['low', 'high'], 'muse-spark-1.3-contributor-free'))[0]!
+  const shaped = options.onPayload?.({ model: 'muse-spark-1.3-contributor-free', input: [], stream: true, reasoning_effort: 'low' }) as Record<string, unknown>
+  assert.equal(shaped.reasoning_effort, undefined, 'top-level reasoning_effort must be removed')
+  assert.deepEqual(shaped.reasoning, { effort: 'low' }, 'responses API schema uses reasoning: { effort }')
+})
+
+test('stream immediately rejects known unavailable models with friendly message', async () => {
+  const adapter = new ZenAdapter({
+    list: () => ['deepseek-v4-flash-free'],
+    decision: () => ({ allowed: false, source: 'known_unavailable', known: true }),
+    reasoningCapability: () => undefined,
+  })
+  const chunks: unknown[] = []
+  for await (const chunk of adapter.stream({ provider: 'OpenCode', model: 'deepseek-v4-flash-free', messages: [] } as never)) {
+    chunks.push(chunk)
+  }
+  const finish = chunks.find((c: any) => c.type === 'finish') as any
+  assert.equal(finish?.reason?.kind, 'error')
+  assert.ok(finish?.reason?.failure?.message?.includes('已被上游下架停用'))
 })
 
 test('stream keeps the free-lane gate rewrite alongside the effort injection', async () => {

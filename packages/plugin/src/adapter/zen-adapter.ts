@@ -2,7 +2,7 @@ import { createProvider, type Api, type Context, type Model } from '@earendil-wo
 import * as openaiCompletions from '@earendil-works/pi-ai/api/openai-completions'
 import * as openaiResponses from '@earendil-works/pi-ai/api/openai-responses'
 
-import { ModelCatalog, ZEN_BASE_URL } from './catalog.ts'
+import { knownUnavailableModels, ModelCatalog, ZEN_BASE_URL } from './catalog.ts'
 import { toStreamChunks, type HarnessChunk, type PiEvent } from './events.ts'
 import { deriveRequestIDs, disguiseHeaders } from './ids.ts'
 import { ensureFreeLaneShape, toPiContext, type HarnessGenerateOptions } from './messages.ts'
@@ -291,6 +291,13 @@ export class ZenAdapter {
     const context = toPiContext(options)
     const ids = deriveRequestIDs(options.messages)
     const model = toPiModel(options.model, this.#catalog.reasoningCapability(options.model)?.reasoning === true)
+
+    if (knownUnavailableModels.includes(options.model)) {
+      const msg = `OpenCode: 模型 "${options.model}" 已被上游下架停用或服务异常，请在模型列表中切换到其他可用模型（如 big-pickle、mimo-v2.6-flash-free、muse-spark-1.3-contributor-free 等）`
+      yield* toStreamChunks((async function* () { yield terminalErrorEvent(msg, model) })(), model.contextWindow)
+      return
+    }
+
     // IP-pool routing context (docs/ip-pool.md 3.3): pi-ai builds the request
     // body and dispatches it on separate layers with no channel for "which
     // model is this fetch for", so the per-request context rides AsyncLocalStorage.
@@ -485,19 +492,40 @@ export class ZenAdapter {
     // Guard against injecting `reasoning_effort` into models/providers that do not
     // support it (e.g. models with no declared effort ladder or non-reasoning models;
     // upstream provider "Console" returns 400 "unknown parameter `reasoning_effort`").
+    const isResponses = isResponsesModel(model.id)
     const validEfforts = reasoningEfforts(this.#catalog.reasoningCapability(model.id))
     const effortWire =
       validEfforts && options.reasoningEffort && validEfforts.some((e) => e.id === options.reasoningEffort)
         ? reasoningEffortWire(options.reasoningEffort)
         : undefined
-    const onPayload =
-      effortWire === undefined
-        ? ensureFreeLaneShape
-        : (payload: unknown): unknown => {
-            const shaped = ensureFreeLaneShape(payload)
-            if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return shaped
-            return { ...((shaped ?? payload) as Record<string, unknown>), reasoning_effort: effortWire }
-          }
+
+    const onPayload = (payload: unknown): unknown => {
+      const shaped = ensureFreeLaneShape(payload)
+      if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return shaped
+      const base = { ...((shaped ?? payload) as Record<string, unknown>) }
+
+      if (isResponses) {
+        // Responses API (muse-spark-*): OpenAI Responses API specification uses
+        // `reasoning: { effort: string }` instead of top-level `reasoning_effort`.
+        // Upstream provider "Console" strictly validates Responses schema and returns
+        // 400 "unknown parameter `reasoning_effort`" if `reasoning_effort` is present at top-level.
+        delete base.reasoning_effort
+        if (effortWire !== undefined) {
+          base.reasoning = { effort: effortWire }
+        }
+        if (shaped === undefined && effortWire === undefined && !('reasoning_effort' in (payload as Record<string, unknown>))) {
+          return undefined
+        }
+        return base
+      }
+
+      // Chat Completions API: top-level reasoning_effort
+      if (effortWire !== undefined) {
+        base.reasoning_effort = effortWire
+        return base
+      }
+      return shaped
+    }
     // Responses-only models (muse-spark-*) must hit /responses, not /chat/completions.
     const provider = isResponsesModel(model.id) && this.#responsesProvider
       ? this.#responsesProvider

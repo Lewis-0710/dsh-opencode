@@ -23,7 +23,7 @@ English | [简体中文](README.zh-CN.md)
 > 3. **Fix Upstream Test Defect**: Fixed mock catalog missing `reasoningCapability` method from upstream PR #8, keeping all test suites passing cleanly.
 > 4. **Upstream Sync Workflow (`sync.sh` & `sync.patch`)**: Built-in automated "Patch-First, Smart-Merge" sync script and clean patch snapshot for effortless upstream updates.
 > 5. **DSH Desktop Deep Integration**: Fully adapted for DSH Desktop profile bundles and workspace overrides, preventing accidental unlinking during market operations.
-> 6. **Reasoning Effort Guard Fix**: Fixed upstream defect where `reasoning_effort` was unconditionally injected regardless of model capability, causing 400 `unknown parameter reasoning_effort` errors from downstream providers (e.g., Console). Injection is now strictly guarded by declared metadata ladders.
+> 6. **Responses API Protocol Adaptation & Catalog Guard**: Fixed upstream defect where `reasoning_effort` was wrongly injected at the root level of Responses API requests (like Muse Spark series), causing 400 `unknown parameter reasoning_effort` errors from downstream providers (Console). The adapter now correctly uses the nested `reasoning: { effort }` structure and strips invalid root-level fields. Furthermore, known broken/deprecated models (such as `deepseek-v4-flash-free`, `jev-1.13-free`) are strictly filtered and guarded.
 >
 > See [sync.patch](./sync.patch) for details.
 

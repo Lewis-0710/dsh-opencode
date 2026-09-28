@@ -23,7 +23,7 @@
 > 3. **修复上游测试用例缺陷**：修复 upstream PR #8 中 mock catalog 缺失 `reasoningCapability` 导致的单元测试崩溃问题，保障测试套件稳定通过。
 > 4. **上游同步与补丁体系（sync.sh / sync.patch）**：内置基于“Patch-First, Smart-Merge”策略的自动同步脚本与干净 patch 快照，方便一键跟随上游最新更新。
 > 5. **DSH Desktop 运行环境深度适配**：优化桌面端 Profile 与 workspace overrides 兼容性，确保插件在桌面环境下稳定持久运行。
-> 6. **修复推理参数盲目注入缺陷（Reasoning Effort Guard）**：修复原代码无论模型是否支持均注入 `reasoning_effort` 导致下游提供商（如 Console）返回 400 `unknown parameter reasoning_effort` 的问题。仅对明确声明了 effort 阶梯的模型暴露与注入，杜绝非法参数下发。
+> 6. **修复推理参数协议适配与失效模型过滤（Responses API & Catalog Guard）**：彻底修复 Responses 协议模型（如 Muse Spark 系列）因顶层被错误注入 `reasoning_effort` 导致下游提供商（Console）报 400 `unknown parameter reasoning_effort` 的问题，自动适配专属的 `reasoning: { effort }` 格式并清理顶层非法字段；同时对已知下架或失效的模型（如 `deepseek-v4-flash-free`、`jev-1.13-free` 等）进行严格过滤与降级保护，确保 DSH 模型列表纯净可用。
 >
 > 详见 [sync.patch](./sync.patch)。
 
