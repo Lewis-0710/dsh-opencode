@@ -49,6 +49,9 @@ const DEFAULT_MAX_TOKENS = 32768
  */
 export const REASONING_EFFORT_LADDER = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 
+/** Levels offered for reasoning models whose metadata declares no ladder. */
+export const DEFAULT_EFFORT_LADDER: readonly string[] = ['off', 'minimal', 'low', 'medium', 'high']
+
 /** Selectable reasoning effort as dsh-llm's resolveModel contract describes it. */
 export interface ZenReasoningEffort {
   id: string
@@ -60,9 +63,8 @@ export interface ZenReasoningEffort {
  * Turn the catalog's models.dev capability into the advertised effort list.
  * A declared ladder (models.dev `reasoning_options` effort values) wins — its
  * values are the upstream-honored spellings, with metadata `none` folded into
- * our `off`. Models without a declared effort ladder (or non-reasoning models)
- * advertise nothing to avoid exposing unsupported controls or injecting
- * unknown `reasoning_effort` parameters to downstream providers (like Console).
+ * our `off`. Models declaring no specific ladder default to standard levels
+ * (Off/Minimal/Low/Medium/High) so DSH model selector allows full control.
  */
 export function reasoningEfforts(capability: { reasoning: boolean; effortValues: string[] } | undefined): ZenReasoningEffort[] | undefined {
   if (!capability?.reasoning) return undefined
@@ -71,12 +73,13 @@ export function reasoningEfforts(capability: { reasoning: boolean; effortValues:
     const level = value === 'none' ? 'off' : value
     if ((REASONING_EFFORT_LADDER as readonly string[]).includes(level) && !declared.includes(level)) declared.push(level)
   }
-  if (declared.length === 0) return undefined
-  const levels = declared.sort(
-    (a, b) =>
-      (REASONING_EFFORT_LADDER as readonly string[]).indexOf(a) -
-      (REASONING_EFFORT_LADDER as readonly string[]).indexOf(b),
-  )
+  const levels = declared.length > 0
+    ? declared.sort(
+        (a, b) =>
+          (REASONING_EFFORT_LADDER as readonly string[]).indexOf(a) -
+          (REASONING_EFFORT_LADDER as readonly string[]).indexOf(b),
+      )
+    : DEFAULT_EFFORT_LADDER
   return levels.map((level) => ({ id: level, name: `${level.charAt(0).toUpperCase()}${level.slice(1)}` }))
 }
 

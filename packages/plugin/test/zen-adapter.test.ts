@@ -52,12 +52,15 @@ test('listModels mirrors the catalog without duplicates', () => {
   assert.deepEqual(models.map((m) => m.id), ['big-pickle', 'mimo-v2.5-free'])
 })
 
-test('reasoningEfforts: declared ladder wins, none folds into off, empty ladder advertises nothing', () => {
+test('reasoningEfforts: declared ladder wins, none folds into off, default ladder otherwise', () => {
   // no capability / non-reasoning model: advertise nothing
   assert.equal(reasoningEfforts(undefined), undefined)
   assert.equal(reasoningEfforts({ reasoning: false, effortValues: ['low'] }), undefined)
-  // reasoning without a declared ladder: advertise nothing (avoids 400 from downstream providers like Console)
-  assert.equal(reasoningEfforts({ reasoning: true, effortValues: [] }), undefined)
+  // reasoning without a declared ladder: the standard five the gateway accepts
+  assert.deepEqual(
+    reasoningEfforts({ reasoning: true, effortValues: [] })?.map((e) => e.id),
+    ['off', 'minimal', 'low', 'medium', 'high'],
+  )
   // declared ladder (muse-spark shape) is offered verbatim, ladder-ordered
   assert.deepEqual(
     reasoningEfforts({ reasoning: true, effortValues: ['xhigh', 'low', 'medium'] })?.map((e) => e.id),
@@ -69,7 +72,7 @@ test('reasoningEfforts: declared ladder wins, none folds into off, empty ladder 
     ['off', 'high'],
   )
   // selector labels are the capitalized level names
-  assert.deepEqual(reasoningEfforts({ reasoning: true, effortValues: ['none', 'high'] })?.[0], { id: 'off', name: 'Off' })
+  assert.deepEqual(reasoningEfforts({ reasoning: true, effortValues: [] })?.[0], { id: 'off', name: 'Off' })
 })
 
 test('reasoningEffortWire maps picker ids to the gateway spelling', () => {
@@ -84,7 +87,7 @@ test('reasoningEffortWire maps picker ids to the gateway spelling', () => {
   assert.equal(reasoningEffortWire('banana'), undefined)
 })
 
-test('resolveModel advertises the thinking-level picker for reasoning models with declared ladder only', () => {
+test('resolveModel advertises the thinking-level picker for reasoning models', () => {
   const adapter = new ZenAdapter({
     list: () => ['big-pickle', 'plain-reasoning', 'ghost'],
     decision: () => ({ allowed: true, source: 'test', known: true }),
@@ -98,8 +101,11 @@ test('resolveModel advertises the thinking-level picker for reasoning models wit
     adapter.resolveModel('OpenCode', 'big-pickle').reasoning?.efforts.map((e) => e.id),
     ['low', 'high'],
   )
-  // reasoning model without declared ladder: no reasoning picker advertised
-  assert.equal(adapter.resolveModel('OpenCode', 'plain-reasoning').reasoning, undefined)
+  // reasoning model without declared ladder gets the standard five the gateway accepts
+  assert.deepEqual(
+    adapter.resolveModel('OpenCode', 'plain-reasoning').reasoning?.efforts.map((e) => e.id),
+    ['off', 'minimal', 'low', 'medium', 'high'],
+  )
   // unknown metadata: no reasoning field — dsh-llm then offers only the default
   assert.equal(adapter.resolveModel('OpenCode', 'ghost').reasoning, undefined)
 })
@@ -167,9 +173,9 @@ test('stream injects the selected reasoning_effort into the outgoing body for su
   const nonReasoningOptions = (await runStream(false, 'low'))[0]!
   assert.equal(nonReasoningOptions.onPayload?.({ ...gateBody }), undefined)
 
-  // reasoning model without declared ladder: NEVER injects reasoning_effort
+  // reasoning model without declared ladder: uses default ladder and injects reasoning_effort
   const emptyEffortOptions = (await runStream(true, 'low', []))[0]!
-  assert.equal(emptyEffortOptions.onPayload?.({ ...gateBody }), undefined)
+  assert.deepEqual(emptyEffortOptions.onPayload?.({ ...gateBody }), { ...gateBody, reasoning_effort: 'low' })
 })
 
 test('stream adapts reasoning parameter to reasoning: { effort } for responses models', async () => {

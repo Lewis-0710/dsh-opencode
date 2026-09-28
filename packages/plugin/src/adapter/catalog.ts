@@ -350,7 +350,10 @@ export class ModelCatalog {
    */
   reasoningCapability(model: string): { reasoning: boolean; effortValues: string[] } | undefined {
     const price = this.#prices.get(model)
-    if (!price) return undefined
+    if (!price) {
+      if (staticFreeModels.includes(model)) return { reasoning: true, effortValues: [] }
+      return undefined
+    }
     return { reasoning: price.reasoning === true, effortValues: price.effortValues ?? [] }
   }
 
