@@ -1,8 +1,8 @@
 diff --git a/README.md b/README.md
-index cf61160..fc7a13f 100644
+index cf61160..c083dbf 100644
 --- a/README.md
 +++ b/README.md
-@@ -1,26 +1,37 @@
+@@ -1,26 +1,38 @@
  <div align="center">
  
 -# opencode2dsh
@@ -32,6 +32,7 @@ index cf61160..fc7a13f 100644
 +> 3. **Fix Upstream Test Defect**: Fixed mock catalog missing `reasoningCapability` method from upstream PR #8, keeping all test suites passing cleanly.
 +> 4. **Upstream Sync Workflow (`sync.sh` & `sync.patch`)**: Built-in automated "Patch-First, Smart-Merge" sync script and clean patch snapshot for effortless upstream updates.
 +> 5. **DSH Desktop Deep Integration**: Fully adapted for DSH Desktop profile bundles and workspace overrides, preventing accidental unlinking during market operations.
++> 6. **Reasoning Effort Guard Fix**: Fixed upstream defect where `reasoning_effort` was unconditionally injected regardless of model capability, causing 400 `unknown parameter reasoning_effort` errors from downstream providers (e.g., Console). Injection is now strictly guarded by declared metadata ladders.
 +>
 +> See [sync.patch](./sync.patch) for details.
 +
@@ -46,7 +47,16 @@ index cf61160..fc7a13f 100644
  
  Requests leave your machine looking exactly like traffic from the OpenCode
  CLI (same user agent, same correlation headers), and the model catalog stays
-@@ -40,26 +51,19 @@ nothing to host.
+@@ -32,7 +44,7 @@ nothing to host.
+ - **Zero credential, zero setup** — the anonymous lane needs no key; install, restart, chat
+ - **Native adapter, no sidecar** — one npm package, no child process, no binary, no local port (the legacy Go sidecar is not part of the published package; see `legacy/`)
+ - **CLI-identical disguise** — requests carry the OpenCode CLI user agent and its session/request/project header set, derived per conversation
+-- **Selectable thinking levels** — reasoning-capable free models expose an effort picker in DSH's model selector (declared ladders where the model metadata provides them, Off/Minimal/Low/Medium/High otherwise); Off sends `reasoning_effort: "none"` upstream to actually stop thinking, and no selection keeps the provider default
++- **Precise thinking level control** — reasoning-capable free models expose an effort picker in DSH's model selector strictly according to declared ladders; models without declared ladders or non-reasoning models omit the parameter entirely, preventing 400 errors from downstream gateways; Off sends `reasoning_effort: "none"` upstream to actually stop thinking, and no selection keeps the provider default
+ - **Live catalog with a fallback chain** — live upstream list ∩ free-by-metadata, falling back to offline cache and a verified static list
+ - **Self-healing** — fast startup retries, periodic refresh, and a written health snapshot for diagnostics
+ - **Proper error surfaces** — upstream failures (rate limit, auth, timeout, transport) arrive in DSH as classified finish reasons, and retries stay owned by DSH
+@@ -40,26 +52,19 @@ nothing to host.
  ## Install
  
  **From the plugin market** (recommended, once this repo is listed there):
@@ -79,7 +89,7 @@ index cf61160..fc7a13f 100644
  
  Requires DSH (DeepSeek Harness) with a web profile; Node.js ≥ 20 (already
  present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
-@@ -69,18 +73,18 @@ present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
+@@ -69,18 +74,18 @@ present if DSH runs); outbound HTTPS to `opencode.ai` and `models.dev`.
  Defaults work out of the box. Override via the profile's `cordis.patch.yml`:
  
  ```yaml
@@ -102,10 +112,10 @@ index cf61160..fc7a13f 100644
  | `agentPath` | auto-resolved | Sidecar only: path to the agent binary. |
  | `agentArgs` | — | Sidecar only: extra CLI args for the agent. |
 diff --git a/README.zh-CN.md b/README.zh-CN.md
-index cb7603f..26d8a1c 100644
+index cb7603f..42d905c 100644
 --- a/README.zh-CN.md
 +++ b/README.zh-CN.md
-@@ -1,25 +1,36 @@
+@@ -1,25 +1,37 @@
  <div align="center">
  
 -# opencode2dsh
@@ -135,6 +145,7 @@ index cb7603f..26d8a1c 100644
 +> 3. **修复上游测试用例缺陷**：修复 upstream PR #8 中 mock catalog 缺失 `reasoningCapability` 导致的单元测试崩溃问题，保障测试套件稳定通过。
 +> 4. **上游同步与补丁体系（sync.sh / sync.patch）**：内置基于“Patch-First, Smart-Merge”策略的自动同步脚本与干净 patch 快照，方便一键跟随上游最新更新。
 +> 5. **DSH Desktop 运行环境深度适配**：优化桌面端 Profile 与 workspace overrides 兼容性，确保插件在桌面环境下稳定持久运行。
++> 6. **修复推理参数盲目注入缺陷（Reasoning Effort Guard）**：修复原代码无论模型是否支持均注入 `reasoning_effort` 导致下游提供商（如 Console）返回 400 `unknown parameter reasoning_effort` 的问题。仅对明确声明了 effort 阶梯的模型暴露与注入，杜绝非法参数下发。
 +>
 +> 详见 [sync.patch](./sync.patch)。
 +
@@ -148,7 +159,19 @@ index cb7603f..26d8a1c 100644
  这个常规 provider 出现在你的 DSH 模型选择器里。
  
  插件发出的请求与 OpenCode CLI 的流量完全同形（相同的 User-Agent、相同的
-@@ -39,24 +50,17 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
+@@ -29,9 +41,9 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
+ ## 特性
+ 
+ - **零凭据、零配置**——匿名通道不需要任何 Key；装好、重启、开聊
+-- **原生 adapter，无 sidecar**——一个 npm 包，没有子进程、没有二进制、没有本地端口（旧版 Go sidecar 不随包发行，见 `legacy/`）
++- **原生 adapter，无 sidecar**——一个 npm包，没有子进程、没有二进制、没有本地端口（旧版 Go sidecar 不随包发行，见 `legacy/`）
+ - **CLI 同形伪装**——请求携带 OpenCode CLI 的 User-Agent 和整套会话/请求/项目关联头，按会话派生
+-- **思考等级可选**——带推理的免费模型在 DSH 模型选择器里出现思考等级选项（模型声明档位的按声明展示，其余提供 Off/Minimal/Low/Medium/High）；Off 向上游发送 `reasoning_effort: "none"` 真正停思考，不选则保持上游默认
++- **思考等级精准控制**——支持思维链调节的免费模型在 DSH 模型选择器里按声明展示等级选项；未声明阶梯或非推理模型不注入该参数，避免下游网关报 400 错误；Off 向上游发送 `reasoning_effort: "none"` 真正停思考，不选则保持上游默认
+ - **实时目录 + 三级回退**——上游实时列表 ∩ 元数据判定免费，断网时依次回退到磁盘缓存与已验证的静态名单
+ - **自愈能力**——启动期快速重试、周期刷新，并落盘健康快照便于排查
+ - **规范的错误呈现**——上游故障（限流、鉴权、超时、传输）以分类的 finish 原因送达 DSH，重试策略始终由 DSH 掌控
+@@ -39,24 +51,17 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
  ## 安装
  
  **从插件市场安装**（推荐，收录后可用）：在 DSH 里打开 **设置 → 插件市场**，
@@ -179,7 +202,7 @@ index cb7603f..26d8a1c 100644
  
  需要带 web profile 的 DSH（DeepSeek Harness）；Node.js ≥ 20（DSH 能跑就满足）；
  出站 HTTPS 需可达 `opencode.ai` 与 `models.dev`。
-@@ -66,18 +70,18 @@ dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+@@ -66,18 +71,18 @@ dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
  默认配置开箱即用。需要覆盖时，编辑 profile 的 `cordis.patch.yml`：
  
  ```yaml
@@ -337,7 +360,7 @@ index 3918515..e7d10ce 100644
    const tools = Array.isArray(body.tools) ? (body.tools as unknown[]) : []
    const names = new Set(
 diff --git a/packages/plugin/src/adapter/zen-adapter.ts b/packages/plugin/src/adapter/zen-adapter.ts
-index 342eb39..6de81a6 100644
+index 342eb39..7d0f811 100644
 --- a/packages/plugin/src/adapter/zen-adapter.ts
 +++ b/packages/plugin/src/adapter/zen-adapter.ts
 @@ -10,7 +10,7 @@ import { routingContext, type RoutingContext } from '../pool/dispatcher.ts'
@@ -359,7 +382,52 @@ index 342eb39..6de81a6 100644
  
  export interface ZenModelInfo {
    id: string
-@@ -108,8 +109,8 @@ const ANONYMOUS_KEY = 'public'
+@@ -48,9 +49,6 @@ const DEFAULT_MAX_TOKENS = 32768
+  */
+ export const REASONING_EFFORT_LADDER = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
+ 
+-/** Levels offered for reasoning models whose metadata declares no ladder. */
+-const DEFAULT_EFFORT_LADDER: readonly string[] = ['off', 'minimal', 'low', 'medium', 'high']
+-
+ /** Selectable reasoning effort as dsh-llm's resolveModel contract describes it. */
+ export interface ZenReasoningEffort {
+   id: string
+@@ -62,24 +60,23 @@ export interface ZenReasoningEffort {
+  * Turn the catalog's models.dev capability into the advertised effort list.
+  * A declared ladder (models.dev `reasoning_options` effort values) wins — its
+  * values are the upstream-honored spellings, with metadata `none` folded into
+- * our `off`. Without a declaration, a reasoning model gets the standard
+- * ladder the Zen gateway accepts for every model. Non-reasoning models
+- * advertise nothing (the picker then offers only the provider default).
++ * our `off`. Models without a declared effort ladder (or non-reasoning models)
++ * advertise nothing to avoid exposing unsupported controls or injecting
++ * unknown `reasoning_effort` parameters to downstream providers (like Console).
+  */
+ export function reasoningEfforts(capability: { reasoning: boolean; effortValues: string[] } | undefined): ZenReasoningEffort[] | undefined {
+   if (!capability?.reasoning) return undefined
+   const declared: string[] = []
+-  for (const value of capability.effortValues) {
++  for (const value of capability.effortValues ?? []) {
+     const level = value === 'none' ? 'off' : value
+     if ((REASONING_EFFORT_LADDER as readonly string[]).includes(level) && !declared.includes(level)) declared.push(level)
+   }
+-  const levels = declared.length > 0
+-    ? declared.sort(
+-        (a, b) =>
+-          (REASONING_EFFORT_LADDER as readonly string[]).indexOf(a) -
+-          (REASONING_EFFORT_LADDER as readonly string[]).indexOf(b),
+-      )
+-    : DEFAULT_EFFORT_LADDER
++  if (declared.length === 0) return undefined
++  const levels = declared.sort(
++    (a, b) =>
++      (REASONING_EFFORT_LADDER as readonly string[]).indexOf(a) -
++      (REASONING_EFFORT_LADDER as readonly string[]).indexOf(b),
++  )
+   return levels.map((level) => ({ id: level, name: `${level.charAt(0).toUpperCase()}${level.slice(1)}` }))
+ }
+ 
+@@ -108,8 +105,8 @@ const ANONYMOUS_KEY = 'public'
   * carry "timeout" so classifyStreamFailure maps them to 'transport' and
   * the rotate loop gets to move the session to a live exit.
   */
@@ -370,7 +438,7 @@ index 342eb39..6de81a6 100644
  
  /** Default watchdog windows (docs/ip-pool.md; test-injectable via constructor). */
  export const DEFAULT_FIRST_EVENT_MS = 30_000
-@@ -123,6 +124,18 @@ export const DEFAULT_BODY_IDLE_MS = 120_000
+@@ -123,6 +120,18 @@ export const DEFAULT_BODY_IDLE_MS = 120_000
   */
  export const RESPONSES_BODY_IDLE_MS = 300_000
  
@@ -389,7 +457,7 @@ index 342eb39..6de81a6 100644
  /** The terminal error event pi-ai owes but never sent (watchdog teardown). */
  function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
    return {
-@@ -139,17 +152,7 @@ function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
+@@ -139,17 +148,7 @@ function terminalErrorEvent(errorMessage: string, model: Model<Api>): PiEvent {
    }
  }
  
@@ -408,7 +476,7 @@ index 342eb39..6de81a6 100644
    const isResponses = isResponsesModel(id)
    return {
      id,
-@@ -204,7 +207,7 @@ export class ZenAdapter {
+@@ -204,7 +203,7 @@ export class ZenAdapter {
      }
      this.#provider = createProvider<Api>({
        id: PROVIDER_ID,
@@ -417,7 +485,7 @@ index 342eb39..6de81a6 100644
        baseUrl,
        auth,
        models: [],
-@@ -212,7 +215,7 @@ export class ZenAdapter {
+@@ -212,7 +211,7 @@ export class ZenAdapter {
      })
      this.#responsesProvider = createProvider<Api>({
        id: PROVIDER_ID,
@@ -426,7 +494,7 @@ index 342eb39..6de81a6 100644
        baseUrl,
        auth,
        models: [],
-@@ -221,7 +224,7 @@ export class ZenAdapter {
+@@ -221,7 +220,7 @@ export class ZenAdapter {
    }
  
    providerInfo(provider: string): { id: string; name: string } {
@@ -435,7 +503,7 @@ index 342eb39..6de81a6 100644
    }
  
    /**
-@@ -450,13 +453,13 @@ export class ZenAdapter {
+@@ -450,13 +449,13 @@ export class ZenAdapter {
            const e = buffered[i] as PiEvent & { error?: { errorMessage?: string }; message?: { errorMessage?: string; stopReason?: string } }
            if (e.type === 'error' && e.error) {
              e.error.errorMessage = rotateStory.length > 1
@@ -451,6 +519,23 @@ index 342eb39..6de81a6 100644
                : e.message.errorMessage!
              break
            }
+@@ -482,7 +481,15 @@ export class ZenAdapter {
+     // seam carries the selected reasoning effort: pi-ai has no option with the
+     // wire semantics this lane needs (selected off must SEND `none`, not omit),
+     // so the effort rides the payload rewrite instead.
+-    const effortWire = reasoningEffortWire(options.reasoningEffort)
++    //
++    // Guard against injecting `reasoning_effort` into models/providers that do not
++    // support it (e.g. models with no declared effort ladder or non-reasoning models;
++    // upstream provider "Console" returns 400 "unknown parameter `reasoning_effort`").
++    const validEfforts = reasoningEfforts(this.#catalog.reasoningCapability(model.id))
++    const effortWire =
++      validEfforts && options.reasoningEffort && validEfforts.some((e) => e.id === options.reasoningEffort)
++        ? reasoningEffortWire(options.reasoningEffort)
++        : undefined
+     const onPayload =
+       effortWire === undefined
+         ? ensureFreeLaneShape
 diff --git a/packages/plugin/src/client/IpPoolCard.tsx b/packages/plugin/src/client/IpPoolCard.tsx
 index 7ce7eca..605b712 100644
 --- a/packages/plugin/src/client/IpPoolCard.tsx
@@ -1146,7 +1231,7 @@ index 5ad37b2..8267ea9 100644
      usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 },
    },
 diff --git a/packages/plugin/test/zen-adapter.test.ts b/packages/plugin/test/zen-adapter.test.ts
-index 08956e0..6041043 100644
+index 08956e0..6eb6934 100644
 --- a/packages/plugin/test/zen-adapter.test.ts
 +++ b/packages/plugin/test/zen-adapter.test.ts
 @@ -1,7 +1,7 @@
@@ -1191,7 +1276,7 @@ index 08956e0..6041043 100644
    assert.equal(call.model.id, 'big-pickle')
    assert.equal(typeof call.stream, 'function')
  })
-@@ -48,7 +48,7 @@ test('listModels mirrors the catalog without duplicates', () => {
+@@ -48,19 +48,16 @@ test('listModels mirrors the catalog without duplicates', () => {
      decision: () => ({ allowed: true, source: 'test', known: true }),
      reasoningCapability: () => ({ reasoning: true, effortValues: [] }),
    })
@@ -1200,21 +1285,78 @@ index 08956e0..6041043 100644
    assert.deepEqual(models.map((m) => m.id), ['big-pickle', 'mimo-v2.5-free'])
  })
  
-@@ -95,11 +95,11 @@ test('resolveModel advertises the thinking-level picker for reasoning models onl
-       model === 'big-pickle' ? { reasoning: true, effortValues: ['low', 'high'] } : undefined,
+-test('reasoningEfforts: declared ladder wins, none folds into off, default ladder otherwise', () => {
++test('reasoningEfforts: declared ladder wins, none folds into off, empty ladder advertises nothing', () => {
+   // no capability / non-reasoning model: advertise nothing
+   assert.equal(reasoningEfforts(undefined), undefined)
+   assert.equal(reasoningEfforts({ reasoning: false, effortValues: ['low'] }), undefined)
+-  // reasoning without a declared ladder: the standard five the gateway accepts
+-  assert.deepEqual(
+-    reasoningEfforts({ reasoning: true, effortValues: [] })?.map((e) => e.id),
+-    ['off', 'minimal', 'low', 'medium', 'high'],
+-  )
++  // reasoning without a declared ladder: advertise nothing (avoids 400 from downstream providers like Console)
++  assert.equal(reasoningEfforts({ reasoning: true, effortValues: [] }), undefined)
+   // declared ladder (muse-spark shape) is offered verbatim, ladder-ordered
+   assert.deepEqual(
+     reasoningEfforts({ reasoning: true, effortValues: ['xhigh', 'low', 'medium'] })?.map((e) => e.id),
+@@ -72,7 +69,7 @@ test('reasoningEfforts: declared ladder wins, none folds into off, default ladde
+     ['off', 'high'],
+   )
+   // selector labels are the capitalized level names
+-  assert.deepEqual(reasoningEfforts({ reasoning: true, effortValues: [] })?.[0], { id: 'off', name: 'Off' })
++  assert.deepEqual(reasoningEfforts({ reasoning: true, effortValues: ['none', 'high'] })?.[0], { id: 'off', name: 'Off' })
+ })
+ 
+ test('reasoningEffortWire maps picker ids to the gateway spelling', () => {
+@@ -87,19 +84,24 @@ test('reasoningEffortWire maps picker ids to the gateway spelling', () => {
+   assert.equal(reasoningEffortWire('banana'), undefined)
+ })
+ 
+-test('resolveModel advertises the thinking-level picker for reasoning models only', () => {
++test('resolveModel advertises the thinking-level picker for reasoning models with declared ladder only', () => {
+   const adapter = new ZenAdapter({
+-    list: () => ['big-pickle', 'ghost'],
++    list: () => ['big-pickle', 'plain-reasoning', 'ghost'],
+     decision: () => ({ allowed: true, source: 'test', known: true }),
+-    reasoningCapability: (model: string) =>
+-      model === 'big-pickle' ? { reasoning: true, effortValues: ['low', 'high'] } : undefined,
++    reasoningCapability: (model: string) => {
++      if (model === 'big-pickle') return { reasoning: true, effortValues: ['low', 'high'] }
++      if (model === 'plain-reasoning') return { reasoning: true, effortValues: [] }
++      return undefined
++    },
    })
    assert.deepEqual(
 -    adapter.resolveModel('opencode2dsh', 'big-pickle').reasoning?.efforts.map((e) => e.id),
 +    adapter.resolveModel('OpenCode', 'big-pickle').reasoning?.efforts.map((e) => e.id),
      ['low', 'high'],
    )
++  // reasoning model without declared ladder: no reasoning picker advertised
++  assert.equal(adapter.resolveModel('OpenCode', 'plain-reasoning').reasoning, undefined)
    // unknown metadata: no reasoning field — dsh-llm then offers only the default
 -  assert.equal(adapter.resolveModel('opencode2dsh', 'ghost').reasoning, undefined)
 +  assert.equal(adapter.resolveModel('OpenCode', 'ghost').reasoning, undefined)
  })
  
  /** Scripted provider that records the streamSimple options it receives. */
-@@ -136,7 +136,7 @@ async function runStream(catalogReasoning: boolean, effort?: string): Promise<Ar
+@@ -126,40 +128,52 @@ const gateBody = {
+   tools: ['bash', 'read'].map((name) => ({ type: 'function', function: { name, description: 'd', parameters: {} } })),
+ }
+ 
+-async function runStream(catalogReasoning: boolean, effort?: string): Promise<Array<{ onPayload?: (payload: unknown) => unknown }>> {
++async function runStream(
++  catalogReasoning: boolean,
++  effort?: string,
++  effortValues: string[] = ['off', 'low', 'high'],
++): Promise<Array<{ onPayload?: (payload: unknown) => unknown }>> {
+   const { provider, captured } = capturingProvider()
+   const adapter = new ZenAdapter(
+     {
+       list: () => ['big-pickle'],
+       decision: () => ({ allowed: true, source: 'test', known: true }),
+-      reasoningCapability: () => ({ reasoning: catalogReasoning, effortValues: [] }),
++      reasoningCapability: () => ({ reasoning: catalogReasoning, effortValues }),
      },
      { providerOverride: provider },
    )
@@ -1223,7 +1365,43 @@ index 08956e0..6041043 100644
    const stream = adapter.stream({ ...options, ...(effort !== undefined ? { reasoningEffort: effort } : {}) } as never)
    for await (const chunk of stream) void chunk
    return captured
-@@ -175,9 +175,11 @@ test('stream keeps the free-lane gate rewrite alongside the effort injection', a
+ }
+ 
+-test('stream injects the selected reasoning_effort into the outgoing body', async () => {
++test('stream injects the selected reasoning_effort into the outgoing body for supported models', async () => {
+   // off -> wire none (the only spelling that stops the always-think models)
+-  const offOptions = (await runStream(true, 'off'))[0]!
++  const offOptions = (await runStream(true, 'off', ['off', 'low', 'high']))[0]!
+   assert.deepEqual(offOptions.onPayload?.({ ...gateBody }), { ...gateBody, reasoning_effort: 'none' })
+ 
+   // ladder levels ride verbatim
+-  const lowOptions = (await runStream(true, 'low'))[0]!
++  const lowOptions = (await runStream(true, 'low', ['off', 'low', 'high']))[0]!
+   assert.deepEqual(lowOptions.onPayload?.({ ...gateBody }), { ...gateBody, reasoning_effort: 'low' })
+ 
+   // no selection: the onPayload stays the plain gate shaper (a gate-satisfied
+   // body needs no rewrite -> undefined, and no effort field is ever added)
+-  const defaultOptions = (await runStream(true))[0]!
++  const defaultOptions = (await runStream(true, undefined, ['off', 'low', 'high']))[0]!
+   assert.equal(defaultOptions.onPayload?.({ ...gateBody }), undefined)
++
++  // non-reasoning model: NEVER injects reasoning_effort even if passed in options
++  const nonReasoningOptions = (await runStream(false, 'low'))[0]!
++  assert.equal(nonReasoningOptions.onPayload?.({ ...gateBody }), undefined)
++
++  // reasoning model without declared ladder: NEVER injects reasoning_effort
++  const emptyEffortOptions = (await runStream(true, 'low', []))[0]!
++  assert.equal(emptyEffortOptions.onPayload?.({ ...gateBody }), undefined)
+ })
+ 
+ test('stream keeps the free-lane gate rewrite alongside the effort injection', async () => {
+   // a body missing the gate tools gets them AND the effort in one rewrite
+-  const offOptions = (await runStream(true, 'off'))[0]!
++  const offOptions = (await runStream(true, 'off', ['off', 'low', 'high']))[0]!
+   const shaped = offOptions.onPayload?.({ model: 'big-pickle', messages: [], stream: true }) as Record<string, unknown>
+   assert.equal(shaped.reasoning_effort, 'none')
+   assert.deepEqual(
+@@ -175,9 +189,11 @@ test('stream keeps the free-lane gate rewrite alongside the effort injection', a
  test('isResponsesModel routes muse-spark to responses, everything else to chat', () => {
    for (const id of ['muse-spark-1.3-contributor-free', 'muse-spark-1.2-contributor-free', 'muse-spark-1.2', 'MUSE-SPARK-1.3']) {
      assert.equal(isResponsesModel(id), true, id)
@@ -1235,7 +1413,7 @@ index 08956e0..6041043 100644
    }
  })
  
-@@ -196,12 +198,12 @@ test('responses models use the wider body-idle window, injectable for tests', as
+@@ -196,12 +212,12 @@ test('responses models use the wider body-idle window, injectable for tests', as
    }
    const measure = async (model: string) => {
      const adapter = new ZenAdapter(
@@ -1250,7 +1428,7 @@ index 08956e0..6041043 100644
        if (chunk.type === 'finish') {
          reason = chunk.reason as { kind: string }
          break
-@@ -216,3 +218,4 @@ test('responses models use the wider body-idle window, injectable for tests', as
+@@ -216,3 +232,4 @@ test('responses models use the wider body-idle window, injectable for tests', as
    assert.equal(responses.reason?.kind, 'error')
    assert.ok(responses.elapsed > 350, `responses should honor the injected 400ms window, took ${responses.elapsed}ms`)
  })
